@@ -39,6 +39,7 @@ module repeatmasker:
             "rm_output": Path(
             outdir, "010_repeatmasker", "genome_masked.fa.gz"
             ),
+            "run_tmpdir": run_tmpdir,
         }
 
 
