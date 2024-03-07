@@ -15,6 +15,7 @@ except KeyError as e:
     print("This probably won't work on a cluster!")
 
 # containers
+bbmap = "docker://quay.io/biocontainers/bbmap:39.01--h92535d8_1"
 
 # modules
 module_tag = "0.0.44"
@@ -26,21 +27,71 @@ rm_snakefile = github(
 
 # globals
 outdir = Path("output")
+logdir = Path(outdir, "logs")
 qos_genome = Path("data", "reference", "QOS_assembly_hifi.fasta")
+qos_genome_5k = Path(outdir, "000_reference", "assembly.5000.fasta")
 
 
-module repeatmasker:
+rule target:
+    input:
+        expand(
+            Path(
+                outdir, "010_repeatmasker.{assembly}", "genome_masked.fa.gz"
+            ),
+            assembly=["all", "5000"],
+        ),
+
+
+# keep this module separate
+module rm_all:
     snakefile:
         rm_snakefile
     config:
         {
-            "outdir": Path(outdir, "010_repeatmasker"),
+            "outdir": Path(outdir, "010_repeatmasker.all"),
             "query_genome": qos_genome,
             "rm_output": Path(
-            outdir, "010_repeatmasker", "genome_masked.fa.gz"
+            outdir, "010_repeatmasker.all", "genome_masked.fa.gz"
             ),
             "run_tmpdir": run_tmpdir,
         }
 
 
-use rule * from repeatmasker as rm_*
+use rule * from rm_all as rm_all_*
+
+
+module rm_subset:
+    snakefile:
+        rm_snakefile
+    config:
+        {
+            "outdir": Path(outdir, "010_repeatmasker.{assembly}"),
+            "query_genome": Path(
+            outdir, "000_reference", "assembly.{assembly}.fasta"
+            ),
+            "rm_output": Path(
+            outdir, "010_repeatmasker.{assembly}", "genome_masked.fa.gz"
+            ),
+            "run_tmpdir": run_tmpdir,
+        }
+
+
+use rule * from rm_subset as rm_subset_*
+
+
+# this genome is highly fragmented
+rule reformat:
+    input:
+        qos_genome,
+    output:
+        Path(outdir, "000_reference", "assembly.{minlength}.fasta"),
+    log:
+        Path(logdir, "reformat.{minlength}.log"),
+    container:
+        bbmap
+    shell:
+        "reformat.sh "
+        "in={input} "
+        "minlength={wildcards.minlength} "
+        "out={output} "
+        "2>{log}"
