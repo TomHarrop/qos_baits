@@ -38,7 +38,7 @@ rule target:
             Path(
                 outdir, "010_repeatmasker.{assembly}", "genome_masked.fa.gz"
             ),
-            assembly=["all", "5000"],
+            assembly=["all", "100000"],
         ),
 
 
