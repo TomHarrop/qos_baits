@@ -21,10 +21,15 @@ samtools = "docker://quay.io/biocontainers/samtools:1.19--h50ea8bc_0"
 
 
 # modules
-module_tag = "0.0.44"
+module_tag = "0.0.50"
 rm_snakefile = github(
     "tomharrop/smk-modules",
     path="modules/repeatmasker/Snakefile",
+    tag=module_tag,
+)
+purge_snakefile = github(
+    "tomharrop/smk-modules",
+    path="modules/purge_haplotigs/Snakefile",
     tag=module_tag,
 )
 
@@ -84,12 +89,44 @@ use rule * from rm_subset as rm_subset_*
 
 
 # map the CCS reads back and try to run purge haplotigs
+
+
 rule map_target:
     input:
         expand(
-            Path(outdir, "010_purge-haplotigs", "{minlength}", "aligned.bam"),
+            Path(
+                outdir, "010_purge-haplotigs", "{minlength}", "histogram.png"
+            ),
             minlength=["100000"],
         ),
+
+
+module purge_haplotigs:
+    snakefile:
+        purge_snakefile
+    config:
+        {
+            "bamfile": Path(
+            outdir, "010_purge-haplotigs", "{minlength}", "aligned.bam"
+            ),
+            "contigs": Path(
+            outdir, "000_reference", "assembly.{minlength}.fasta"
+            ),
+            "outdir": Path(outdir, "010_purge-haplotigs", "{minlength}"),
+            "run_tmpdir": Path(
+            run_tmpdir, "010_purge-haplotigs", "{minlength}"
+            ),
+        }
+
+
+use rule * from purge_haplotigs as purge_haplotigs_*
+
+
+use rule purge from purge_haplotigs as purge_haplotigs_purge with:
+    threads: lambda wildcards, attempt: 48 * attempt
+    resources:
+        time=lambda wildcards, attempt: f"{attempt - 1}-23",
+        mem_mb=lambda wildcards, attempt: int(256e3),
 
 
 rule sort_ccs_bamfile:
