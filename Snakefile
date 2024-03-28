@@ -129,6 +129,12 @@ use rule purge from purge_haplotigs as purge_haplotigs_purge with:
         mem_mb=lambda wildcards, attempt: int(256e3),
 
 
+use rule hist from purge_haplotigs as purge_haplotigs_hist with:
+    threads: lambda wildcards, attempt: 12 * attempt
+    resources:
+        time=lambda wildcards, attempt: 90 * attempt,
+
+
 rule sort_ccs_bamfile:
     input:
         Path(
