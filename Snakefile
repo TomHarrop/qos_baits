@@ -156,7 +156,7 @@ rule map_ccs_reads:
 
 rule bam_to_fastq:
     input:
-        ccs_reads,
+        Path(run_tmpdir, "ccs_reads.bam"),
     output:
         pipe(Path(run_tmpdir, "ccs_reads.fastq")),
     log:
@@ -164,7 +164,20 @@ rule bam_to_fastq:
     container:
         samtools
     shell:
-        "samtools fastq {input} >> {output} 2> {log}"
+        "samtools fastq <{input} >>{output} 2>{log}"
+
+
+rule samtools_cat:
+    input:
+        ccs_reads,
+    output:
+        pipe(Path(run_tmpdir, "ccs_reads.bam")),
+    log:
+        Path(logdir, "samtools_cat.log"),
+    container:
+        samtools
+    shell:
+        "samtools cat {input} >> {output} 2>{log}"
 
 
 # this genome is highly fragmented
