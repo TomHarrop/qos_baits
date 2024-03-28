@@ -104,7 +104,7 @@ rule sort_ccs_bamfile:
         Path(outdir, "010_purge-haplotigs", "{minlength}", "aligned.bam"),
     params:
         wd=Path(run_tmpdir, "010_purge-haplotigs"),
-        mem_mb_per_thread=8e3,
+        mem_mb_per_thread=int(8e3),
     log:
         Path(logdir, "sort_ont_bamfile.{minlength}.log"),
     threads: 4
