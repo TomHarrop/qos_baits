@@ -16,6 +16,9 @@ except KeyError as e:
 
 # containers
 bbmap = "docker://quay.io/biocontainers/bbmap:39.01--h92535d8_1"
+minimap2 = "docker://quay.io/biocontainers/minimap2:2.27--he4a0461_1"
+samtools = "docker://quay.io/biocontainers/samtools:1.19--h50ea8bc_0"
+
 
 # modules
 module_tag = "0.0.44"
@@ -29,6 +32,7 @@ rm_snakefile = github(
 outdir = Path("output")
 logdir = Path(outdir, "logs")
 qos_genome = Path("data", "reference", "QOS_assembly_hifi.fasta")
+ccs_reads = Path("data", "raw_reads").glob("*.bam")
 qos_genome_5k = Path(outdir, "000_reference", "assembly.5000.fasta")
 
 
@@ -77,6 +81,90 @@ module rm_subset:
 
 
 use rule * from rm_subset as rm_subset_*
+
+
+# map the CCS reads back and try to run purge haplotigs
+rule map_target:
+    input:
+        expand(
+            Path(outdir, "010_purge-haplotigs", "{minlength}", "aligned.bam"),
+            minlength=["100000"],
+        ),
+
+
+rule sort_ccs_bamfile:
+    input:
+        Path(
+            run_tmpdir,
+            "010_purge-haplotigs",
+            "{minlength}",
+            "aligned.sam",
+        ),
+    output:
+        Path(outdir, "010_purge-haplotigs", "{minlength}", "aligned.bam"),
+    params:
+        wd=Path(run_tmpdir, "010_purge-haplotigs"),
+        mem_mb_per_thread=8e3,
+    log:
+        Path(logdir, "sort_ont_bamfile.{minlength}.log"),
+    threads: 4
+    resources:
+        time=lambda wildcards, attempt: 480 * (2**attempt),
+        mem_mb=lambda wildcards, threads: int(8e3) * threads,
+    container:
+        samtools
+    shell:
+        "samtools sort "
+        "-m {params.mem_mb_per_thread}M "
+        "-o {output} "
+        "-T {params.wd} "
+        "< {input} "
+        "2> {log}"
+
+
+rule map_ccs_reads:
+    input:
+        ref=Path(outdir, "000_reference", "assembly.{minlength}.fasta"),
+        reads=Path(run_tmpdir, "ccs_reads.fastq"),
+    output:
+        pipe(
+            Path(
+                run_tmpdir,
+                "010_purge-haplotigs",
+                "{minlength}",
+                "aligned.sam",
+            )
+        ),
+    log:
+        Path(logdir, "map_ont_reads.{minlength}.log"),
+    threads: 24
+    resources:
+        time=lambda wildcards, attempt: 480 * (2**attempt),
+        mem_mb=int(32e3),
+    container:
+        minimap2
+    shell:
+        "minimap2 "
+        "-t {threads} "
+        "-ax map-hifi "
+        "{input.ref} "
+        "{input.reads} "
+        "--secondary=no "
+        "> {output} "
+        "2> {log}"
+
+
+rule bam_to_fastq:
+    input:
+        ccs_reads,
+    output:
+        pipe(Path(run_tmpdir, "ccs_reads.fastq")),
+    log:
+        Path(logdir, "bam_to_fastq.log"),
+    container:
+        samtools
+    shell:
+        "samtools fastq {input} >> {output} 2> {log}"
 
 
 # this genome is highly fragmented
