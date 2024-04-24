@@ -200,7 +200,7 @@ rule map_ccs_reads:
 
 rule flye:
     input:
-        ccs=Path(run_tmpdir, "ccs_reads.flye.fastq"),
+        ccs=Path(run_tmpdir, "ccs_reads.fastq"),
     output:
         Path(flye_directory, "assembly.fasta"),
     params:
@@ -222,20 +222,12 @@ rule flye:
         "&>> {log}"
 
 
-rule flye_input:
-    input:
-        Path(run_tmpdir, "ccs_reads.fastq")
-    output:
-        temp(Path(run_tmpdir, "ccs_reads.flye.fastq"))
-    shell:
-        "cat <{input} >> {output}"
-
 
 rule bam_to_fastq:
     input:
         Path(run_tmpdir, "ccs_reads.bam"),
     output:
-        pipe(Path(run_tmpdir, "ccs_reads.fastq")),
+        temp(Path(run_tmpdir, "ccs_reads.fastq")),
     log:
         Path(logdir, "bam_to_fastq.log"),
     threads: 1
