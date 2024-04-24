@@ -210,7 +210,7 @@ rule flye:
     threads: min(130, workflow.cores) - 2
     resources:
         time=167 * 60,  # 6 days 23 hours
-        mem_mb=int(128e3),
+        mem_mb=int(384e3),
     container:
         flye
     shell:
