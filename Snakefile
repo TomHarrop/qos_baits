@@ -16,9 +16,9 @@ except KeyError as e:
 
 # containers
 bbmap = "docker://quay.io/biocontainers/bbmap:39.01--h92535d8_1"
+flye = "docker://quay.io/biocontainers/flye:2.9.3--py310h2b6aa90_1"
 minimap2 = "docker://quay.io/biocontainers/minimap2:2.27--he4a0461_1"
 samtools = "docker://quay.io/biocontainers/samtools:1.19--h50ea8bc_0"
-
 
 # modules
 module_tag = "0.0.50"
@@ -39,6 +39,7 @@ logdir = Path(outdir, "logs")
 qos_genome = Path("data", "reference", "QOS_assembly_hifi.fasta")
 ccs_reads = Path("data", "raw_reads").glob("*.bam")
 qos_genome_5k = Path(outdir, "000_reference", "assembly.5000.fasta")
+flye_directory = Path(outdir, "020_flye")
 
 
 rule target:
@@ -197,6 +198,30 @@ rule map_ccs_reads:
         "2> {log}"
 
 
+rule flye:
+    input:
+        ccs=Path(run_tmpdir, "ccs_reads.fastq"),
+    output:
+        Path(flye_directory, "assembly.fasta"),
+    params:
+        outdir=lambda wildcards, input: Path(input.ccs[0]).parent,
+    log:
+        Path(logdir, "flye.log"),
+    threads: min(130, workflow.cores) - 2
+    resources:
+        time="6-23",
+        mem_mb=int(128e3),
+    container:
+        flye
+    shell:
+        "flye "
+        "--pacbio-hifi "
+        "{input.ccs} "
+        "--out-dir {params.outdir} "
+        "--threads {threads} "
+        "&>> {log}"
+
+
 rule bam_to_fastq:
     input:
         Path(run_tmpdir, "ccs_reads.bam"),
@@ -204,6 +229,7 @@ rule bam_to_fastq:
         pipe(Path(run_tmpdir, "ccs_reads.fastq")),
     log:
         Path(logdir, "bam_to_fastq.log"),
+    threads: 1
     container:
         samtools
     shell:
@@ -217,6 +243,7 @@ rule samtools_cat:
         pipe(Path(run_tmpdir, "ccs_reads.bam")),
     log:
         Path(logdir, "samtools_cat.log"),
+    threads: 1
     container:
         samtools
     shell:
