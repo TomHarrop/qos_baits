@@ -228,7 +228,7 @@ rule flye_input:
     output:
         temp(Path(run_tmpdir, "ccs_reads.flye.fastq"))
     shell:
-        "cat {input} >> {output}"
+        "cat <{input} >> {output}"
 
 
 rule bam_to_fastq:
