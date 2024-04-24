@@ -233,7 +233,11 @@ rule bam_to_fastq:
     container:
         samtools
     shell:
-        "samtools fastq <{input} >>{output} 2>{log}"
+        "samtools fastq "
+        "<{input} "
+        "2>{log} "
+        "| head -n 400000 " # testing
+        ">>{output} "
 
 
 rule samtools_cat:
@@ -247,7 +251,10 @@ rule samtools_cat:
     container:
         samtools
     shell:
-        "samtools cat {input} >> {output} 2>{log}"
+        "samtools cat "
+        "{input} "
+        "2>{log} "
+        ">> {output} "
 
 
 # this genome is highly fragmented
