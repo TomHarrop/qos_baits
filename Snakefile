@@ -235,8 +235,8 @@ rule bam_to_fastq:
         samtools
     shell:
         "samtools fastq "
-        "-o {output} "
-        "&>{log} "
+        ">{output} "
+        "2>{log} "
         "<{input} "
 
 rule samtools_cat:
