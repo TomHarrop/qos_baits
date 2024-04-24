@@ -209,7 +209,7 @@ rule flye:
         Path(logdir, "flye.log"),
     threads: min(130, workflow.cores) - 2
     resources:
-        time="6-23",
+        time=167 * 60,  # 6 days 23 hours
         mem_mb=int(128e3),
     container:
         flye
