@@ -220,7 +220,7 @@ rule flye:
         "flye "
         "--pacbio-hifi "
         "{input.ccs} "
-        "--meta "
+        "--meta --debug "
         "--out-dir {params.outdir} "
         "--threads {threads} "
         "&>> {log}"
