@@ -19,6 +19,9 @@ bbmap = "docker://quay.io/biocontainers/bbmap:39.01--h92535d8_1"
 flye = "docker://quay.io/biocontainers/flye:2.9.3--py310h2b6aa90_1"
 minimap2 = "docker://quay.io/biocontainers/minimap2:2.27--he4a0461_1"
 samtools = "docker://quay.io/biocontainers/samtools:1.19--h50ea8bc_0"
+cutadapt = "docker://quay.io/biocontainers/cutadapt:4.8--py310h4b81fae_0"
+
+
 
 # modules
 module_tag = "0.0.50"
@@ -217,6 +220,7 @@ rule flye:
         "flye "
         "--pacbio-hifi "
         "{input.ccs} "
+        "--meta "
         "--out-dir {params.outdir} "
         "--threads {threads} "
         "&>> {log}"
