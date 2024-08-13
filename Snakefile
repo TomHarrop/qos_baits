@@ -1,40 +1,13 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
-import tempfile
 
-
-# set up a temporary directory for this run
-try:
-    run_tmpdir = config["run_tmpdir"]
-    print(f"Caught run_tmpdir {run_tmpdir}")
-except KeyError as e:
-    print(f"{e} not set in config")
-    run_tmpdir = tempfile.mkdtemp()
-    print(f"Setting run_tmpdir to {run_tmpdir}")
-    print("This probably won't work on a cluster!")
 
 # containers
 bbmap = "docker://quay.io/biocontainers/bbmap:39.01--h92535d8_1"
-flye = "docker://quay.io/biocontainers/flye:2.9.3--py310h2b6aa90_1"
-minimap2 = "docker://quay.io/biocontainers/minimap2:2.27--he4a0461_1"
-samtools = "docker://quay.io/biocontainers/samtools:1.19--h50ea8bc_0"
-cutadapt = "docker://quay.io/biocontainers/cutadapt:4.8--py310h4b81fae_0"
+biopython = "docker://quay.io/biocontainers/biopython:1.78"
+captus = "docker://quay.io/biocontainers/captus:1.0.1--pyhdfd78af_2"
 
-
-
-# modules
-module_tag = "0.0.50"
-rm_snakefile = github(
-    "tomharrop/smk-modules",
-    path="modules/repeatmasker/Snakefile",
-    tag=module_tag,
-)
-purge_snakefile = github(
-    "tomharrop/smk-modules",
-    path="modules/purge_haplotigs/Snakefile",
-    tag=module_tag,
-)
 
 # globals
 outdir = Path("output")
@@ -45,219 +18,75 @@ qos_genome_5k = Path(outdir, "000_reference", "assembly.5000.fasta")
 flye_directory = Path(outdir, "020_flye")
 
 
-rule target:
+#####################
+# ASSEMBLY PIPELINE #
+#####################
+
+# currently flye is choking on this data
+
+
+##########
+# CAPTUS #
+##########
+
+
+# Try to extract the mega353 targets bundled with Captus.  Later we can do any
+# targets by adding the target file and using
+# `"--nuc_refs {input.target_file}"`
+rule captus_extract:
     input:
-        expand(
-            Path(
-                outdir, "010_repeatmasker.{assembly}", "genome_masked.fa.gz"
-            ),
-            assembly=["all", "100000"],
-        ),
-
-
-# keep this module separate
-module rm_all:
-    snakefile:
-        rm_snakefile
-    config:
-        {
-            "outdir": Path(outdir, "010_repeatmasker.all"),
-            "query_genome": qos_genome,
-            "rm_output": Path(
-            outdir, "010_repeatmasker.all", "genome_masked.fa.gz"
-            ),
-            "run_tmpdir": run_tmpdir,
-        }
-
-
-use rule * from rm_all as rm_all_*
-
-
-module rm_subset:
-    snakefile:
-        rm_snakefile
-    config:
-        {
-            "outdir": Path(outdir, "010_repeatmasker.{assembly}"),
-            "query_genome": Path(
-            outdir, "000_reference", "assembly.{assembly}.fasta"
-            ),
-            "rm_output": Path(
-            outdir, "010_repeatmasker.{assembly}", "genome_masked.fa.gz"
-            ),
-            "run_tmpdir": run_tmpdir,
-        }
-
-
-use rule * from rm_subset as rm_subset_*
-
-
-# map the CCS reads back and try to run purge haplotigs
-
-
-rule map_target:
-    input:
-        expand(
-            Path(
-                outdir, "010_purge-haplotigs", "{minlength}", "histogram.png"
-            ),
-            minlength=["100000"],
-        ),
-
-
-module purge_haplotigs:
-    snakefile:
-        purge_snakefile
-    config:
-        {
-            "bamfile": Path(
-            outdir, "010_purge-haplotigs", "{minlength}", "aligned.bam"
-            ),
-            "contigs": Path(
+        external_fasta=Path(
             outdir, "000_reference", "assembly.{minlength}.fasta"
-            ),
-            "outdir": Path(outdir, "010_purge-haplotigs", "{minlength}"),
-            "run_tmpdir": Path(
-            run_tmpdir, "010_purge-haplotigs", "{minlength}"
-            ),
-        }
-
-
-use rule * from purge_haplotigs as purge_haplotigs_*
-
-
-use rule purge from purge_haplotigs as purge_haplotigs_purge with:
-    threads: lambda wildcards, attempt: 48 * attempt
-    resources:
-        time=lambda wildcards, attempt: f"{attempt - 1}-23",
-        mem_mb=lambda wildcards, attempt: int(256e3),
-
-
-use rule hist from purge_haplotigs as purge_haplotigs_hist with:
-    threads: lambda wildcards, attempt: 12 * attempt
-    resources:
-        time=lambda wildcards, attempt: 90 * attempt,
-
-
-rule sort_ccs_bamfile:
-    input:
-        Path(
-            run_tmpdir,
-            "010_purge-haplotigs",
-            "{minlength}",
-            "aligned.sam",
         ),
     output:
-        Path(outdir, "010_purge-haplotigs", "{minlength}", "aligned.bam"),
-    params:
-        wd=Path(run_tmpdir, "010_purge-haplotigs"),
-        mem_mb_per_thread=int(8e3),
-    log:
-        Path(logdir, "sort_ont_bamfile.{minlength}.log"),
-    threads: 4
-    resources:
-        time=lambda wildcards, attempt: 480 * (2**attempt),
-        mem_mb=lambda wildcards, threads: int(8e3) * threads,
-    container:
-        samtools
-    shell:
-        "samtools sort "
-        "-m {params.mem_mb_per_thread}M "
-        "-o {output} "
-        "-T {params.wd} "
-        "< {input} "
-        "2> {log}"
-
-
-rule map_ccs_reads:
-    input:
-        ref=Path(outdir, "000_reference", "assembly.{minlength}.fasta"),
-        reads=Path(run_tmpdir, "ccs_reads.fastq"),
-    output:
-        pipe(
-            Path(
-                run_tmpdir,
-                "010_purge-haplotigs",
-                "{minlength}",
-                "aligned.sam",
-            )
+        outdir=directory(
+            Path(outdir, "040_captus", "min{minlength}", "03_extractions")
+        ),
+        refs_json=Path(
+            "040_captus",
+            "min{minlength}",
+            "captus-assembly_extract.refs.json",
         ),
     log:
-        Path(logdir, "map_ont_reads.{minlength}.log"),
-    threads: 24
+        Path(logdir, "extract.{minlength}.log"),
+    benchmark:
+        Path(logdir, "benchmark.extract.{minlength}.log")
+    threads: lambda wildcards, attempt: 32
     resources:
-        time=lambda wildcards, attempt: 480 * (2**attempt),
-        mem_mb=int(32e3),
+        time=lambda wildcards, attempt: "5-00"
+        mem_mb=lambda wildcards, attempt: 32e3,
+    shadow:
+        "minimal"
     container:
-        minimap2
+        captus
     shell:
-        "minimap2 "
-        "-t {threads} "
-        "-ax map-hifi "
-        "{input.ref} "
-        "{input.reads} "
-        "--secondary=no "
-        "> {output} "
-        "2> {log}"
-
-
-rule flye:
-    input:
-        ccs=Path(run_tmpdir, "ccs_reads.fastq"),
-    output:
-        Path(flye_directory, "assembly.fasta"),
-    params:
-        outdir=lambda wildcards, input: Path(input.ccs[0]).parent,
-    log:
-        Path(logdir, "flye.log"),
-    threads: min(130, workflow.cores) - 2
-    resources:
-        time=167 * 60,  # 6 days 23 hours
-        mem_mb=int(384e3),
-    container:
-        flye
-    shell:
-        "flye "
-        "--pacbio-hifi "
-        "{input.ccs} "
-        "--meta --debug "
-        "--out-dir {params.outdir} "
+        "captus_assembly extract "
+        "--captus_assemblies_dir 02_assemblies "
+        "--fastas {input.external_fasta} "
+        "--out {output.outdir}/. "
+        "--nuc_refs Mega353 "
+        "--mit_refs SeedPlantsMIT "
+        "--ptd_refs SeedPlantsPTD "
+        '--ram "$(( {resources.mem_mb}/1000 ))" '
         "--threads {threads} "
-        "&>> {log}"
+        "--concurrent 3 "
+        "&> {log} "
+        "; mv {output.outdir}/captus-assembly_extract.refs.json "
+        "{output.refs_json}"
 
 
-
-rule bam_to_fastq:
+rule captus_targets:
+    default_target: True
     input:
-        Path(run_tmpdir, "ccs_reads.bam"),
-    output:
-        temp(Path(run_tmpdir, "ccs_reads.fastq")),
-    log:
-        Path(logdir, "bam_to_fastq.log"),
-    threads: 1
-    container:
-        samtools
-    shell:
-        "samtools fastq "
-        ">{output} "
-        "2>{log} "
-        "<{input} "
+        expand(
+            [str(x) for x in rules.captus_extract.output],
+            minlength=["1000000", "100000"],
+        ),
 
-rule samtools_cat:
-    input:
-        ccs_reads,
-    output:
-        pipe(Path(run_tmpdir, "ccs_reads.bam")),
-    log:
-        Path(logdir, "samtools_cat.log"),
-    threads: 1
-    container:
-        samtools
-    shell:
-        "samtools cat "
-        "{input} "
-        "2>{log} "
-        ">> {output} "
+
+############
+# REF DATA #
+############
 
 
 # this genome is highly fragmented
