@@ -53,7 +53,7 @@ rule captus_extract:
         Path(logdir, "benchmark.extract.{minlength}.log")
     threads: lambda wildcards, attempt: 32
     resources:
-        time=lambda wildcards, attempt: "5-00"
+        time=lambda wildcards, attempt: "5-00",
         mem_mb=lambda wildcards, attempt: 32e3,
     shadow:
         "minimal"
