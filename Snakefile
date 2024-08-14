@@ -47,7 +47,7 @@ def format_extract_target(wildcards, input):
         return "--nuc_refs Mega353"
     elif wildcards.targetset == "mega353_plus_orchidaceae":
         target_path = input.targets
-        return f"--nuc-refs {target_path}"
+        return f"--nuc_refs {target_path}"
     else:
         raise valueError(f"wtf {wildcards}")
 
