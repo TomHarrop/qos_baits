@@ -83,6 +83,7 @@ rule captus_extract:
             )
         ),
         refs_json=Path(
+            outdir,
             "040_captus",
             "min{minlength}.{targetset}",
             "captus-assembly_extract.refs.json",
