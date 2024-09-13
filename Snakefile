@@ -3,6 +3,38 @@
 from pathlib import Path
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
 
+
+def clobber_type(file):
+    if isinstance(file, list):
+        return file[0]
+    else:
+        return file
+
+
+def generate_conversion_code(wildcards, input, output):
+    my_string = clobber_type(input)
+    my_suffix = Path(my_string).suffix
+    if my_suffix == ".zip":
+        return f"unzip -p {input} | gzip -1 >> {output}"
+    elif my_suffix == ".gz":
+        return f"cp {input} {output}"
+    elif my_suffix in [".fasta", ".fna"]:
+        return f"gzip -1 < {input} > {output}"
+    else:
+        return f"cp {input} > {output}"
+
+
+def get_remote_file(wildcards):
+    if wildcards.datatype == "query":
+        my_file = query_file_locations[wildcards.dataset]
+        return my_file
+    elif wildcards.datatype == "reference":
+        my_file = reference_genome_locations[wildcards.dataset]
+        return my_file
+    else:
+        raise ValueError(f"Unknown datatype {wildcards.datatype}")
+
+
 # containers
 bbmap = "docker://quay.io/biocontainers/bbmap:39.01--h92535d8_1"
 biopython = "docker://quay.io/biocontainers/biopython:1.78"
@@ -12,22 +44,48 @@ captus = "docker://quay.io/biocontainers/captus:1.0.1--pyhdfd78af_2"
 # globals
 outdir = Path("output")
 logdir = Path(outdir, "logs")
-qos_genome = Path("data", "reference", "QOS_assembly_hifi.fasta")
-
-mega353_file_url = (
-    "https://github.com/chrisjackson-pellicle/"
-    "NewTargets/raw/v1.0.0/mega353.fasta.zip"
-)
-
-target_files = [
-    Path(outdir, "000_reference", "mega353.fasta.gz"),
-    # This is Lalita's target file, i *think* this is what lab members refer to
-    # as "Esserman"
-    Path("data", "reference", "Orchidaceae963TargetFile_LSv1.fasta.gz"),
-]
 
 # snakemake's downloader
 HTTP = HTTPRemoteProvider()
+
+# input files
+reference_genome_locations = {
+    "qos": Path("data", "reference", "QOS_assembly_hifi.fasta"),
+    "pzijinensis": HTTP.remote(
+        (
+            "https://ftp.ncbi.nlm.nih.gov/genomes/all/"
+            "GCA/039/513/925/GCA_039513925.1_PZIJ_v1.0/"
+            "GCA_039513925.1_PZIJ_v1.0_genomic.fna.gz"
+        ),
+        keep_local=True,
+    ),
+    "pguangdongensis": HTTP.remote(
+        (
+            "https://ftp.ncbi.nlm.nih.gov/genomes/all/"
+            "GCA/039/583/875/GCA_039583875.1_PGUA_v1.0/"
+            "GCA_039583875.1_PGUA_v1.0_genomic.fna.gz"
+        ),
+        keep_local=True,
+    ),
+}
+all_reference_genomes = reference_genome_locations.keys()
+
+query_file_locations = {
+    "mega353": HTTP.remote(
+        (
+            "https://github.com/chrisjackson-pellicle/"
+            "NewTargets/raw/v1.0.0/mega353.fasta.zip"
+        ),
+        keep_local=True,
+    ),
+    # This is Lalita's target file, i *think* this is what lab members refer to
+    # as "Esserman"
+    "orchidaceae963": Path(
+        "data", "reference", "Orchidaceae963TargetFile_LSv1.fasta.gz"
+    ),
+}
+
+all_query_datasets = query_file_locations.keys()
 
 
 #####################
@@ -42,61 +100,52 @@ HTTP = HTTPRemoteProvider()
 ##########
 
 
-def format_extract_target(wildcards, input):
-    if wildcards.targetset == "mega353":
-        return "--nuc_refs Mega353"
-    elif wildcards.targetset == "mega353_plus_orchidaceae":
-        target_path = input.targets
-        return f"--nuc_refs {target_path}"
-    else:
-        raise valueError(f"wtf {wildcards}")
-
-
-def get_extract_input(wildcards):
-    input_dict = {
-        "external_fasta": Path(
-            outdir, "000_reference", "assembly.{minlength}.fasta"
-        ),
-    }
-    if wildcards.targetset == "mega353_plus_orchidaceae":
-        input_dict["targets"] = Path(
+rule captus_extract:
+    wildcard_constraints:
+        ref_dataset="|".join(all_reference_genomes),
+        query_dataset="|".join(all_query_datasets),
+    input:
+        external_fasta=Path(
             outdir,
             "000_reference",
-            "combined_targetfiles.deduplicated_renamed.fasta",
-        )
-    return input_dict
-
-
-# Try to extract the mega353 targets bundled with Captus.  Later we can do any
-# targets by adding the target file and using
-# `"--nuc_refs {input.target_file}"`
-rule captus_extract:
-    input:
-        unpack(get_extract_input),
+            "reference",
+            "{ref_dataset}.{minlength}.fasta",
+        ),
+        targets=Path(
+            outdir,
+            "000_reference",
+            "query",
+            "{query_dataset}.deduplicated_renamed.fasta",
+        ),
     output:
         outdir=directory(
             Path(
                 outdir,
-                "040_captus",
-                "min{minlength}.{targetset}",
+                "010_captus",
+                "{ref_dataset}.{query_dataset}",
+                "min{minlength}",
                 "03_extractions",
             )
         ),
         refs_json=Path(
             outdir,
-            "040_captus",
-            "min{minlength}.{targetset}",
+            "010_captus",
+            "{ref_dataset}.{query_dataset}",
+            "min{minlength}",
             "captus-assembly_extract.refs.json",
         ),
-    params:
-        targets=format_extract_target,
     log:
-        Path(logdir, "extract.{minlength}.{targetset}.log"),
+        Path(
+            logdir, "extract", "{ref_dataset}.{query_dataset}.{minlength}.log"
+        ),
     benchmark:
-        Path(logdir, "benchmark.extract.{minlength}.{targetset}.log")
-    threads: lambda wildcards, attempt: 32
+        Path(
+            logdir,
+            "benchmark.extract.{ref_dataset}.{query_dataset}.{minlength}.log",
+        )
+    threads: lambda wildcards, attempt: 12
     resources:
-        time=lambda wildcards, attempt: "5-00",
+        time=lambda wildcards, attempt: "7-00",
         mem_mb=lambda wildcards, attempt: 32e3,
     shadow:
         "minimal"
@@ -107,7 +156,7 @@ rule captus_extract:
         "--captus_assemblies_dir 02_assemblies "
         "--fastas {input.external_fasta} "
         "--out {output.outdir}/. "
-        "{params.targets} "
+        "--nuc_refs {input.targets} "
         "--mit_refs SeedPlantsMIT "
         "--ptd_refs SeedPlantsPTD "
         '--ram "$(( {resources.mem_mb}/1000 ))" '
@@ -123,7 +172,8 @@ rule captus_targets:
     input:
         expand(
             [str(x) for x in rules.captus_extract.output],
-            targetset=["mega353", "mega353_plus_orchidaceae"],
+            ref_dataset=all_reference_genomes,
+            query_dataset=all_query_datasets,
             minlength=["1000000", "100000"],
         ),
 
@@ -133,14 +183,21 @@ rule captus_targets:
 ############
 
 
-# this genome is highly fragmented
+# do the same thing for all reference genomes
 rule reformat:
+    wildcard_constraints:
+        ref_dataset="|".join(all_reference_genomes),
     input:
-        qos_genome,
+        Path(outdir, "000_reference", "reference", "{ref_dataset}.fasta.gz"),
     output:
-        Path(outdir, "000_reference", "assembly.{minlength}.fasta"),
+        Path(
+            outdir,
+            "000_reference",
+            "reference",
+            "{ref_dataset}.{minlength}.fasta",
+        ),
     log:
-        Path(logdir, "reformat.{minlength}.log"),
+        Path(logdir, "reformat.{ref_dataset}.{minlength}.log"),
     container:
         bbmap
     shell:
@@ -152,18 +209,24 @@ rule reformat:
 
 
 rule rename_target_sequences:
+    wildcard_constraints:
+        query_dataset="|".join(all_query_datasets),
     input:
         Path(
-            outdir, "000_reference", "combined_targetfiles.deduplicated.fasta"
+            outdir,
+            "000_reference",
+            "query",
+            "{query_dataset}.deduplicated.fasta",
         ),
     output:
         Path(
             outdir,
             "000_reference",
-            "combined_targetfiles.deduplicated_renamed.fasta",
+            "query",
+            "{query_dataset}.deduplicated_renamed.fasta",
         ),
     log:
-        Path(logdir, "rename_target_sequences.log"),
+        Path(logdir, "rename_target_sequences.{query_dataset}.log"),
     resources:
         time=1,
     container:
@@ -179,33 +242,34 @@ rule rename_target_sequences:
         "2> {log}"
 
 
-rule combine_targetfile:
+rule dedupe_targetfile:
     input:
-        target_files,
+        Path(outdir, "000_reference", "query", "{query_dataset}.fasta.gz"),
     output:
         pipe=pipe(
             Path(
                 outdir,
                 "000_reference",
-                "combined_targetfiles.deduplicated.fasta",
+                "query",
+                "{query_dataset}.deduplicated.fasta",
             )
         ),
         duplicates=Path(
             outdir,
             "000_reference",
-            "combined_targetfiles.discarded_duplicates.fasta",
+            "000_reference",
+            "{query_dataset}.discarded_duplicates.fasta",
         ),
     log:
-        Path(logdir, "combine_targetfile.log"),
+        Path(logdir, "dedupe_targetfile.{query_dataset}.log"),
     threads: 2
     resources:
         time=1,
     container:
         bbmap
     shell:
-        "cat {input} | "
         "dedupe.sh "
-        "in=stdin.fasta.gz "
+        "in={input} "
         "out=stdout.fasta "
         "outd={output.duplicates} "
         "uniquenames=t "
@@ -219,13 +283,15 @@ rule combine_targetfile:
         "2> {log} "
 
 
-rule download_targetfile:
+rule collect_remote_file:
     input:
-        HTTP.remote(mega353_file_url, keep_local=True),
+        get_remote_file,
     output:
-        Path(outdir, "000_reference", "mega353.fasta.gz"),
+        Path(outdir, "000_reference", "{datatype}", "{dataset}.fasta.gz"),
+    params:
+        conversion_code=generate_conversion_code,
     threads: 1
     resources:
         partition_flag="--partition=io",
     shell:
-        "unzip -p {input} | gzip -1 >> {output}"
+        "{params.conversion_code}"
