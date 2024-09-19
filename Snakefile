@@ -18,7 +18,7 @@ def generate_conversion_code(wildcards, input, output):
         return f"unzip -p {input} | gzip -1 >> {output}"
     elif my_suffix == ".gz":
         return f"cp {input} {output}"
-    elif my_suffix in [".fasta", ".fna"]:
+    elif my_suffix in [".fasta", ".fa", ".fna"]:
         return f"gzip -1 < {input} > {output}"
     else:
         return f"cp {input} > {output}"
