@@ -86,6 +86,11 @@ query_file_locations = {
     # Downloaded from
     # https://datadryad.org/stash/dataset/doi:10.5061/dryad.z08kprrbj
     "peakall": Path("data", "reference", "S1-2FinalSeq.fa"),
+    # Downloaded from
+    # https://datadryad.org/stash/dataset/doi:10.5061/dryad.sj3tx96bn
+    "orchidinae205": Path(
+        "data", "reference", "orchidinae-205_reference.fasta"
+    ),
 }
 
 all_query_datasets = query_file_locations.keys()
