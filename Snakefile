@@ -83,6 +83,9 @@ query_file_locations = {
     "orchidaceae963": Path(
         "data", "reference", "Orchidaceae963TargetFile_LSv1.fasta.gz"
     ),
+    # Downloaded from
+    # https://datadryad.org/stash/dataset/doi:10.5061/dryad.z08kprrbj
+    "peakall": Path("data", "reference", "S1-2FinalSeq.fa"),
 }
 
 all_query_datasets = query_file_locations.keys()
