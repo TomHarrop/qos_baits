@@ -265,7 +265,7 @@ rule dedupe_targetfile:
         duplicates=Path(
             outdir,
             "000_reference",
-            "000_reference",
+            "query",
             "{query_dataset}.discarded_duplicates.fasta",
         ),
     log:
@@ -280,13 +280,14 @@ rule dedupe_targetfile:
         "in={input} "
         "out=stdout.fasta "
         "outd={output.duplicates} "
-        "uniquenames=t "
-        "sort=name "
         "ascending=t "
         "exact=t "
-        "touppercase=t "
-        "maxsubs=0 "
+        "fixjunk=t "
         "maxedits=0 "
+        "maxsubs=0 "
+        "sort=name "
+        "touppercase=t "
+        "uniquenames=t "
         "> {output.pipe} "
         "2> {log} "
 
