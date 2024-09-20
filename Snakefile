@@ -151,7 +151,7 @@ rule captus_extract:
             logdir,
             "benchmark.extract.{ref_dataset}.{query_dataset}.{minlength}.log",
         )
-    threads: lambda wildcards, attempt: 12
+    threads: lambda wildcards, attempt: 3  # bc BLAT is single-threaded
     resources:
         time=lambda wildcards, attempt: "7-00",
         mem_mb=lambda wildcards, attempt: 32e3,
