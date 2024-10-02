@@ -63,6 +63,8 @@ make_granges_from_captus_gff <- function(
 # GLOBALS #
 ###########
 
+
+
 # the query gff
 query_gff_file <- "output/010_captus/qos.peakall/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_contigs.gff"
 
@@ -71,6 +73,12 @@ ref_gff_file <- "output/010_captus/qos.mega353/min1000000/03_extractions/qos.100
 
 fai_file <- "test/file.fasta.fai"
 genome_label <- "qos"
+
+# second test with pzijinensis
+query_gff_file <- "output/010_captus/pzijinensis.peakall/min1000000/03_extractions/pzijinensis.1000000__captus-ext/01_coding_NUC/NUC_contigs.gff"
+ref_gff_file <- "output/010_captus/pzijinensis.mega353/min1000000/03_extractions/pzijinensis.1000000__captus-ext/01_coding_NUC/NUC_contigs.gff"
+fai_file <- "test/pzijinensis.1000000.fasta.fai"
+genome_label <- "pzijinensis"
 
 
 ########
@@ -110,7 +118,4 @@ proximate_loci <- findOverlaps(
   maxgap= 10e3
 )
 
-
-query_loci[1189]
-ref_loci[267]
 
