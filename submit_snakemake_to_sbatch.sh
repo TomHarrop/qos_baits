@@ -28,4 +28,5 @@ snakemake \
 	--keep-going \
 	--retries 0 \
 	--cores 64 \
-	--local-cores 2
+	--local-cores 2 \
+	output/020_overlaps/pzijinensis_min1000000.peakall.peakall/overlapping_loci.csv
