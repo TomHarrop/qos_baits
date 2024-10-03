@@ -97,6 +97,13 @@ query_file_locations = {
 all_query_datasets = query_file_locations.keys()
 
 
+wildcard_constraints:
+    ref_targets="|".join(all_query_datasets),
+    query_targets="|".join(all_query_datasets),
+    ref_dataset="|".join(all_reference_genomes),
+    query_dataset="|".join(all_query_datasets),
+
+
 #####################
 # ASSEMBLY PIPELINE #
 #####################
@@ -109,14 +116,7 @@ all_query_datasets = query_file_locations.keys()
 #########################
 
 
-wildcard_constraints:
-    ref_targets="|".join(all_query_datasets),
-    query_targets="|".join(all_query_datasets),
-    ref_dataset="|".join(all_reference_genomes),
-    query_dataset="|".join(all_query_datasets),
-
-
-rule test_target:
+rule find_overlaps_target:
     input:
         expand(
             Path(
@@ -413,3 +413,14 @@ rule collect_remote_file:
         partition_flag="--partition=io",
     shell:
         "{params.conversion_code}"
+
+
+###########
+# TARGETS #
+###########
+
+
+rule target:
+    default_target: True
+    input:
+        rules.find_overlaps_target.input,
