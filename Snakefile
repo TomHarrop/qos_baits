@@ -39,7 +39,8 @@ def get_remote_file(wildcards):
 bbmap = "docker://quay.io/biocontainers/bbmap:39.01--h92535d8_1"
 biopython = "docker://quay.io/biocontainers/biopython:1.78"
 captus = "docker://quay.io/biocontainers/captus:1.0.1--pyhdfd78af_2"
-
+r = "docker://ghcr.io/tomharrop/r-containers:r2u_24.04_cv1"
+samtools = "docker://quay.io/biocontainers/samtools:1.21--h50ea8bc_0"
 
 # globals
 outdir = Path("output")
@@ -103,6 +104,86 @@ all_query_datasets = query_file_locations.keys()
 # currently flye is choking on this data
 
 
+#########################
+# FIND OVERLAPPING LOCI #
+#########################
+
+
+wildcard_constraints:
+    ref_targets="|".join(all_query_datasets),
+    query_targets="|".join(all_query_datasets),
+    ref_dataset="|".join(all_reference_genomes),
+    query_dataset="|".join(all_query_datasets),
+
+
+rule test_target:
+    input:
+        expand(
+            Path(
+                outdir,
+                "020_overlaps",
+                "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+                "overlapping_loci.csv",
+            ),
+            ref_dataset=all_reference_genomes,
+            minlength=["1000000"],
+            ref_targets=["mega353"],
+            query_targets=[x for x in all_query_datasets if x != "mega353"],
+        ),
+
+
+rule find_overlapping_loci:
+    input:
+        query_gff=Path(
+            outdir,
+            "010_captus",
+            "{ref_dataset}.{query_targets}",
+            "min{minlength}",
+            "03_extractions",
+            "{ref_dataset}.{minlength}__captus-ext",
+            "06_assembly_annotated",
+            "{ref_dataset}.{minlength}_hit_contigs.gff",
+        ),
+        ref_gff=Path(
+            outdir,
+            "010_captus",
+            "{ref_dataset}.{ref_targets}",
+            "min{minlength}",
+            "03_extractions",
+            "{ref_dataset}.{minlength}__captus-ext",
+            "06_assembly_annotated",
+            "{ref_dataset}.{minlength}_hit_contigs.gff",
+        ),
+        fai=Path(
+            outdir, "000_reference", "reference", "{ref_dataset}.fasta.fai"
+        ),
+    output:
+        overlapping_loci=Path(
+            outdir,
+            "020_overlaps",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "overlapping_loci.csv",
+        ),
+        proximate_loci=Path(
+            outdir,
+            "020_overlaps",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "proximate_loci.csv",
+        ),
+    params:
+        maxgap=10000,  # maxgap between "proximate" loci
+    log:
+        Path(
+            logdir,
+            "find_overlapping_loci",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}.log",
+        ),
+    container:
+        r
+    script:
+        "src/find_overlapping_loci.R"
+
+
 ##########
 # CAPTUS #
 ##########
@@ -141,6 +222,16 @@ rule captus_extract:
             "{ref_dataset}.{query_dataset}",
             "min{minlength}",
             "captus-assembly_extract.refs.json",
+        ),
+        annotated_assembly=Path(
+            outdir,
+            "010_captus",
+            "{ref_dataset}.{query_dataset}",
+            "min{minlength}",
+            "03_extractions",
+            "{ref_dataset}.{minlength}__captus-ext",
+            "06_assembly_annotated",
+            "{ref_dataset}.{minlength}_hit_contigs.gff",
         ),
     log:
         Path(
@@ -192,6 +283,24 @@ rule captus_targets:
 
 
 # do the same thing for all reference genomes
+rule index_ref_dataset:
+    input:
+        Path(outdir, "000_reference", "reference", "{ref_dataset}.fasta.gz"),
+    output:
+        Path(outdir, "000_reference", "reference", "{ref_dataset}.fasta.fai"),
+    log:
+        Path(logdir, "index_ref_dataset.{ref_dataset}.log"),
+    shadow:
+        "minimal"
+    container:
+        samtools
+    shell:
+        "samtools faidx "
+        "--fai-idx {input} "
+        "<( gunzip -c {output} ) "
+        "2> {log}"
+
+
 rule reformat:
     wildcard_constraints:
         ref_dataset="|".join(all_reference_genomes),

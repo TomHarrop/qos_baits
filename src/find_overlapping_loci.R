@@ -1,5 +1,44 @@
 #!/usr/bin/env Rscript
 
+if (exists("snakemake")) {
+  log <- file(snakemake@log[[1]], open = "wt")
+  sink(log, type = "message")
+  sink(log, append = TRUE, type = "output")
+
+  # second test with pzijinensis
+  query_gff_file <- snakemake@input[["query_gff"]]
+  ref_gff_file <- snakemake@input[["ref_gff"]]
+  fai_file <- snakemake@input[["fai"]]
+  genome_label <- snakemake@wildcards[["ref_dataset"]]
+  ref_name <- snakemake@wildcards[["ref_targets"]]
+  query_name <- snakemake@wildcards[["query_targets"]]
+  overlapping_loci_file <- snakemake@output[["overlapping_loci"]]
+  proximate_loci_file <- snakemake@output[["proximate_loci"]]
+} else {
+  maxgap <- 10e3
+
+  # the query gff
+  query_gff_file <- "output/010_captus/qos.peakall/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_contigs.gff"
+
+  # the reference, i.e. usually mega353
+  ref_gff_file <- "output/010_captus/qos.mega353/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_contigs.gff"
+
+  # genome information
+  fai_file <- "test/file.fasta.fai"
+  genome_label <- "qos"
+
+  # second test with pzijinensis
+  query_gff_file <- "output/010_captus/pzijinensis.peakall/min1000000/03_extractions/pzijinensis.1000000__captus-ext/06_assembly_annotated/pzijinensis.1000000_hit_contigs.gff"
+  ref_gff_file <- "output/010_captus/pzijinensis.mega353/min1000000/03_extractions/pzijinensis.1000000__captus-ext/06_assembly_annotated/pzijinensis.1000000_hit_contigs.gff"
+  fai_file <- "test/pzijinensis.1000000.fasta.fai"
+  genome_label <- "pzijinensis"
+  ref_name <- "mega353"
+  query_name <- "peakall"
+  overlapping_loci_file <- "test/overlapping.csv"
+  proximate_loci_file <- "test/nearby.csv"
+}
+
+
 library(data.table)
 library(GenomicRanges)
 library(rtracklayer)
@@ -78,26 +117,6 @@ process_hits <- function(overlaps, query_loci, ref_loci) {
 # GLOBALS #
 ###########
 
-# the query gff
-query_gff_file <- "output/010_captus/qos.peakall/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_contigs.gff"
-
-# the reference, i.e. usually mega353
-ref_gff_file <- "output/010_captus/qos.mega353/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_contigs.gff"
-
-# genome information
-fai_file <- "test/file.fasta.fai"
-genome_label <- "qos"
-
-# second test with pzijinensis
-query_gff_file <- "output/010_captus/pzijinensis.peakall/min1000000/03_extractions/pzijinensis.1000000__captus-ext/06_assembly_annotated/pzijinensis.1000000_hit_contigs.gff"
-ref_gff_file <- "output/010_captus/pzijinensis.mega353/min1000000/03_extractions/pzijinensis.1000000__captus-ext/06_assembly_annotated/pzijinensis.1000000_hit_contigs.gff"
-fai_file <- "test/pzijinensis.1000000.fasta.fai"
-genome_label <- "pzijinensis"
-ref_name <- "mega353"
-query_name <- "peakall"
-overlapping_loci_file <- "test/overlapping.csv"
-proximate_loci_file <- "test/nearby.csv"
-
 # order of output columns
 output_cols <- c(
   "genome_name",
@@ -154,7 +173,7 @@ proximate_loci <- findOverlaps(
   query = query_loci,
   subject = ref_loci,
   ignore.strand = TRUE,
-  maxgap = 10e3
+  maxgap = maxgap
 )
 
 # process the overlap information
@@ -173,10 +192,14 @@ proximate_hits_dt[
 ]
 
 # write the output
-fwrite(full_hits_dt[, ..output_cols],
-       overlapping_loci_file)
+fwrite(
+  full_hits_dt[, ..output_cols],
+  overlapping_loci_file
+)
 
-fwrite(proximate_hits_dt[, ..output_cols],
-       overlapping_loci_file)
+fwrite(
+  proximate_hits_dt[, ..output_cols],
+  overlapping_loci_file
+)
 
 sessionInfo()

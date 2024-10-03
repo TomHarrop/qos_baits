@@ -28,4 +28,5 @@ snakemake \
 	--keep-going \
 	--retries 1 \
 	--cores 64 \
-	--local-cores 2
+	--local-cores 2 \
+	test_target
