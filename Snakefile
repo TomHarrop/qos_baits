@@ -118,6 +118,7 @@ wildcard_constraints:
 
 rule find_overlaps_target:
     input:
+        # includes check for overlaps among reference loci
         expand(
             Path(
                 outdir,
@@ -129,18 +130,6 @@ rule find_overlaps_target:
             minlength=["1000000"],
             ref_targets=["mega353"],
             query_targets=all_query_datasets,
-        ),
-        # check for overlaps among reference loci
-        expand(
-            Path(
-                outdir,
-                "020_overlaps",
-                "{ref_dataset}_min{minlength}.{ref_targets}.{ref_targets}",
-                "overlapping_loci.csv",
-            ),
-            ref_dataset=all_reference_genomes,
-            minlength=["1000000"],
-            ref_targets=["mega353"],
         ),
 
 
