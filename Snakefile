@@ -124,23 +124,48 @@ rule find_overlaps_target:
                 outdir,
                 "020_overlaps",
                 "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
-                "overlapping_loci.csv",
+                "loci_to_merge",
             ),
             ref_dataset=all_reference_genomes,
             minlength=["1000000"],
             ref_targets=["mega353"],
-            query_targets=all_query_datasets,
+            query_targets=[x for x in all_query_datasets if x != "mega353"],
         ),
 
 
-# rule generate_lists_of_loci_to_merge:
-#     input:
-#         overlapping_loci=Path(
-#             outdir,
-#             "020_overlaps",
-#             "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
-#             "overlapping_loci.csv",
-#         ),
+rule generate_lists_of_loci_to_merge:
+    input:
+        overlapping_loci=Path(
+            outdir,
+            "020_overlaps",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "overlapping_loci.csv",
+        ),
+        ref_self_overlaps=Path(
+            outdir,
+            "020_overlaps",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{ref_targets}",
+            "overlapping_loci.csv",
+        ),
+    output:
+        outdir=directory(
+            Path(
+                outdir,
+                "020_overlaps",
+                "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+                "loci_to_merge",
+            )
+        ),
+    log:
+        Path(
+            logdir,
+            "generate_lists_of_loci_to_merge",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}.log",
+        ),
+    container:
+        r
+    script:
+        "src/generate_lists_of_loci_to_merge.R"
 
 
 rule find_overlapping_loci:
