@@ -205,7 +205,7 @@ fwrite(
 
 fwrite(
   proximate_hits_dt[, ..output_cols],
-  overlapping_loci_file
+  proximate_loci_file
 )
 
 sessionInfo()
