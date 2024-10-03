@@ -18,7 +18,7 @@ if (exists("snakemake")) {
   genome_label <- snakemake@wildcards[["ref_dataset"]]
   ref_name <- snakemake@wildcards[["ref_targets"]]
   query_name <- snakemake@wildcards[["query_targets"]]
-  my_maxgap <- integer(snakemake@params[["maxgap"]])
+  my_maxgap <- as.integer(snakemake@params[["maxgap"]])
 } else {
   my_maxgap <- 10e3
 
@@ -174,6 +174,7 @@ overlaps <- findOverlaps(
   ignore.strand = TRUE
 )
 
+message(paste0("Finding proximate loci with a maxgap of ", my_maxgap))
 proximate_loci <- findOverlaps(
   query = query_loci,
   subject = ref_loci,
