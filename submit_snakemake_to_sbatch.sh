@@ -26,7 +26,7 @@ printf "TMPDIR: %s\n" "${TMPDIR}"
 snakemake \
 	--profile petrichor_tmp \
 	--keep-going \
-	--retries 1 \
+	--retries 0 \
 	--cores 64 \
 	--local-cores 2 \
 	output/020_overlaps/pzijinensis_min1000000.mega353.peakall/overlapping_loci.csv \

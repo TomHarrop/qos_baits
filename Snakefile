@@ -171,7 +171,7 @@ rule find_overlapping_loci:
             "proximate_loci.csv",
         ),
     params:
-        maxgap=10000,  # maxgap between "proximate" loci
+        maxgap=int(10000),  # maxgap between "proximate" loci
     log:
         Path(
             logdir,

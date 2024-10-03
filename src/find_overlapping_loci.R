@@ -18,9 +18,9 @@ if (exists("snakemake")) {
   genome_label <- snakemake@wildcards[["ref_dataset"]]
   ref_name <- snakemake@wildcards[["ref_targets"]]
   query_name <- snakemake@wildcards[["query_targets"]]
-  maxgap <- integer(snakemake@params[["maxgap"]])
+  my_maxgap <- integer(snakemake@params[["maxgap"]])
 } else {
-  maxgap <- 10e3
+  my_maxgap <- 10e3
 
   # the query gff
   query_gff_file <- "output/010_captus/qos.peakall/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_contigs.gff"
@@ -178,7 +178,7 @@ proximate_loci <- findOverlaps(
   query = query_loci,
   subject = ref_loci,
   ignore.strand = TRUE,
-  maxgap = maxgap
+  maxgap = my_maxgap
 )
 
 # process the overlap information
