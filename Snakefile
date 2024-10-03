@@ -128,8 +128,18 @@ rule find_overlaps_target:
             ref_dataset=all_reference_genomes,
             minlength=["1000000"],
             ref_targets=["mega353"],
-            query_targets=[x for x in all_query_datasets if x != "mega353"],
+            query_targets=all_query_datasets,
         ),
+
+
+# rule generate_lists_of_loci_to_merge:
+#     input:
+#         overlapping_loci=Path(
+#             outdir,
+#             "020_overlaps",
+#             "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+#             "overlapping_loci.csv",
+#         ),
 
 
 rule find_overlapping_loci:
