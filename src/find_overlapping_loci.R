@@ -5,15 +5,20 @@ if (exists("snakemake")) {
   sink(log, type = "message")
   sink(log, append = TRUE, type = "output")
 
-  # second test with pzijinensis
+  # inputs
   query_gff_file <- snakemake@input[["query_gff"]]
   ref_gff_file <- snakemake@input[["ref_gff"]]
   fai_file <- snakemake@input[["fai"]]
+
+  # outputs
+  overlapping_loci_file <- snakemake@output[["overlapping_loci"]]
+  proximate_loci_file <- snakemake@output[["proximate_loci"]]
+
+  # params
   genome_label <- snakemake@wildcards[["ref_dataset"]]
   ref_name <- snakemake@wildcards[["ref_targets"]]
   query_name <- snakemake@wildcards[["query_targets"]]
-  overlapping_loci_file <- snakemake@output[["overlapping_loci"]]
-  proximate_loci_file <- snakemake@output[["proximate_loci"]]
+  maxgap <- integer(snakemake@params[["maxgap"]])
 } else {
   maxgap <- 10e3
 
