@@ -296,8 +296,8 @@ rule index_ref_dataset:
         samtools
     shell:
         "samtools faidx "
-        "--fai-idx {input} "
-        "<( gunzip -c {output} ) "
+        "--fai-idx {output} "
+        "<( gunzip -c {input} ) "
         "2> {log}"
 
 
