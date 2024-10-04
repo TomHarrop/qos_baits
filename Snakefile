@@ -105,11 +105,88 @@ wildcard_constraints:
     query_dataset="|".join(all_query_datasets),
 
 
-#####################
-# ASSEMBLY PIPELINE #
-#####################
+#####################################
+# RE-RUN CAPTUS WITH MERGED TARGETS #
+#####################################
 
-# currently flye is choking on this data
+
+rule captus_extract_round2:
+    input:
+        external_fasta=Path(
+            outdir,
+            "000_reference",
+            "reference",
+            "{ref_dataset}.{minlength}.fasta",
+        ),
+        targetfile_list=expand(
+            Path(
+                outdir,
+                "030_merged-target-sequences",
+                "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+                "merged_targets.fasta",
+            ),
+            ref_dataset=["qos", "pzijinensis"],
+            minlength=["1000000"],
+            ref_targets=["mega353"],
+            query_targets=["peakall"],
+        ),
+    output:
+        outdir=directory(
+            Path(
+                outdir,
+                "040_captus_round2",
+                "{ref_dataset}",
+                "min{minlength}",
+                "03_extractions",
+            )
+        ),
+        refs_json=Path(
+            outdir,
+            "040_captus_round2",
+            "{ref_dataset}",
+            "min{minlength}",
+            "captus-assembly_extract.refs.json",
+        ),
+        annotated_assembly=Path(
+            outdir,
+            "040_captus_round2",
+            "{ref_dataset}",
+            "min{minlength}",
+            "03_extractions",
+            "{ref_dataset}.{minlength}__captus-ext",
+            "06_assembly_annotated",
+            "{ref_dataset}.{minlength}_hit_contigs.gff",
+        ),
+    log:
+        Path(logdir, "extract_round2", "{ref_dataset}.{minlength}.log"),
+    benchmark:
+        Path(
+            logdir,
+            "benchmark.extract.{ref_dataset}.{minlength}.log",
+        )
+    threads: lambda wildcards, attempt: 3  # bc BLAT is single-threaded
+    resources:
+        time=lambda wildcards, attempt: "7-00",
+        mem_mb=lambda wildcards, attempt: 32e3,
+    shadow:
+        "minimal"
+    container:
+        captus
+    shell:
+        "cat {input.targetfile_list} > my_targets.fa && "
+        "captus_assembly extract "
+        "--captus_assemblies_dir 02_assemblies "
+        "--fastas {input.external_fasta} "
+        "--out {output.outdir}/. "
+        "--nuc_refs my_targets.fa "
+        "--mit_refs SeedPlantsMIT "
+        "--ptd_refs SeedPlantsPTD "
+        '--ram "$(( {resources.mem_mb}/1000 ))" '
+        "--threads {threads} "
+        "--concurrent 3 "
+        "&> {log} "
+        "; mv {output.outdir}/captus-assembly_extract.refs.json "
+        "{output.refs_json}"
 
 
 #########################
@@ -131,18 +208,6 @@ rule find_overlaps_target:
             minlength=["1000000"],
             ref_targets=["mega353"],
             query_targets=[x for x in all_query_datasets if x != "mega353"],
-        ),
-        expand(
-            Path(
-                outdir,
-                "030_merged-target-sequences",
-                "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
-                "merged_targets.fasta",
-            ),
-            ref_dataset=["qos", "pzijinensis"],
-            minlength=["1000000"],
-            ref_targets=["mega353"],
-            query_targets=["peakall"],
         ),
 
 
@@ -602,3 +667,14 @@ rule target:
     default_target: True
     input:
         rules.find_overlaps_target.input,
+        expand(
+            Path(
+                outdir,
+                "040_captus_round2",
+                "{ref_dataset}",
+                "min{minlength}",
+                "03_extractions",
+            ),
+            ref_dataset=["qos", "pzijinensis"],
+            minlength=["1000000"],
+        ),
