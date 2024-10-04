@@ -17,6 +17,8 @@ if (exists("snakemake")) {
     "output/020_overlaps/pzijinensis_min1000000.mega353.peakall/overlapping_loci.csv"
   ref_self_overlaps_file <-
     "output/020_overlaps/pzijinensis_min1000000.mega353.mega353/overlapping_loci.csv"
+  query_self_overlaps_file <-
+    "output/020_overlaps/pzijinensis_min1000000.peakall.peakall/overlapping_loci.csv"
   outdir <- "test/loci_to_merge"
 }
 

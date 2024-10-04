@@ -39,6 +39,7 @@ def get_remote_file(wildcards):
 bbmap = "docker://quay.io/biocontainers/bbmap:39.01--h92535d8_1"
 biopython = "docker://quay.io/biocontainers/biopython:1.78"
 captus = "docker://quay.io/biocontainers/captus:1.0.1--pyhdfd78af_2"
+orthofinder = "docker://davidemms/orthofinder:2.5.5.2"
 r = "docker://ghcr.io/tomharrop/r-containers:r2u_24.04_cv1"
 samtools = "docker://quay.io/biocontainers/samtools:1.21--h50ea8bc_0"
 
@@ -220,6 +221,70 @@ rule find_overlapping_loci:
         "src/find_overlapping_loci.R"
 
 
+# group loci in the peakall file
+rule orthofinder:
+    input:
+        Path(
+            outdir,
+            "000_reference",
+            "query",
+            "{query_dataset}.grouped_targets",
+        ),
+    output:
+        outdir=directory(
+            Path(
+                outdir,
+                "005_grouped-targets",
+                "{query_dataset}",
+                "orthofinder",
+            )
+        ),
+        og_txt=Path(
+            outdir,
+            "005_grouped-targets",
+            "{query_dataset}",
+            "orthofinder",
+            "Orthogroups",
+            "Orthogroups.txt",
+        ),
+        og_tsv=Path(
+            outdir,
+            "005_grouped-targets",
+            "{query_dataset}",
+            "orthofinder",
+            "Orthogroups",
+            "Orthogroups.tsv",
+        ),
+    # params:
+    #     outdir=lambda wildcards, output: Path(output.og_txt).parent.parent,
+    log:
+        Path(logdir, "orthofinder.{query_dataset}.log"),
+    resources:
+        mem_mb=int(32e3),
+        time=30,
+    threads: 12
+    container:
+        orthofinder
+    shadow:
+        "minimal"
+    shell:
+        "rm -r {output.outdir} && "
+        "orthofinder "
+        "-t {threads} "
+        "-a {threads} "
+        "-d "
+        "-M msa "
+        "-S diamond_ultra_sens "
+        "-oa "
+        "-o OrthoFinder "
+        "-f {input} "
+        "&> {log} "
+        "&& "
+        "find OrthoFinder -mindepth 1 -maxdepth 1 -type d "
+        "-name 'Results_*' "
+        "-exec mv {{}} {output.outdir} \;"
+
+
 ##########
 # CAPTUS #
 ##########
@@ -359,6 +424,30 @@ rule reformat:
         "minlength={wildcards.minlength} "
         "out={output} "
         "2>{log}"
+
+
+# this only needs to be done for the Peakall target file
+rule group_targets_by_prefix:
+    input:
+        targets=Path(
+            outdir,
+            "000_reference",
+            "query",
+            "{query_dataset}.deduplicated_renamed.fasta",
+        ),
+    output:
+        outdir=directory(
+            Path(
+                outdir,
+                "000_reference",
+                "query",
+                "{query_dataset}.grouped_targets",
+            )
+        ),
+    container:
+        biopython
+    script:
+        "src/group_targets_by_prefix.py"
 
 
 rule rename_target_sequences:
