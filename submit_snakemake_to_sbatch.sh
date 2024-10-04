@@ -29,4 +29,6 @@ snakemake \
 	--retries 0 \
 	--cores 64 \
 	--local-cores 2 \
-	output/020_overlaps/pzijinensis_min1000000.peakall.peakall/overlapping_loci.csv
+	output/030_merged-target-sequences/qos_min1000000.mega353.peakall/merged_targets.fasta \
+	output/030_merged-target-sequences/pzijinensis_min1000000.mega353.peakall/merged_targets.fasta
+

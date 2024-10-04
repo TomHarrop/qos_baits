@@ -1,8 +1,28 @@
 #!/usr/bin/env python3
 
-import os
-import csv
 from Bio import SeqIO
+from functools import cache
+from pathlib import Path
+from snakemake import logger
+import csv
+import os
+
+
+def generate_new_spec(record_id, species_name):
+    new_id, locus = get_new_id(record_id, species_name)
+    new_spec = new_id.replace("-", "_")
+    return new_spec
+
+
+@cache
+def get_new_id(record_id, species_name):
+    try:
+        old_spec, locus, paralog_number = record_id.split("__")
+        new_id = f"{species_name}_paralog{paralog_number}-{locus}"
+    except ValueError:
+        old_spec, locus = record_id.split("__")
+        new_id = f"{species_name}-{locus}"
+    return new_id, locus
 
 
 def read_merge_info(directory):
@@ -12,26 +32,138 @@ def read_merge_info(directory):
             with open(os.path.join(directory, file_name), mode="r") as file:
                 reader = csv.DictReader(file)
                 for row in reader:
-                    if row["ref_hit"] not in merge_info:
-                        merge_info[row["ref_hit"]] = []
-                    merge_info[row["ref_hit"]].append(row["query_hit"])
+                    merge_info[row["query_hit"]] = row["ref_hit"]
     return merge_info
 
 
+def read_orthogroup_info(orthogroup_file):
+    seq_id_to_orthogroup = {}
+    with open(orthogroup_file, mode="r") as file:
+        for line in file:
+            og, seq_ids = line.strip().split(":")
+            split_ids = seq_ids.split()
+            # it's not a "group" if there's only one sequence in it
+            if len(split_ids) > 1:
+                for seq_id in split_ids:
+                    seq_id_to_orthogroup[seq_id] = og
+            else:
+                print(f"{seq_ids} is a singleton")
+    return seq_id_to_orthogroup
 
-ref_targets = "output/010_captus/qos.mega353/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_coding_NT.fna"
-query_targets = "output/010_captus/qos.peakall/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_coding_NT.fna"
-loci_to_merge_dir = "output/020_overlaps/qos_min1000000.mega353.peakall/loci_to_merge"
 
-combined_output = "combined.fasta"
+# inputs
+ref_targets = snakemake.input["ref_targets"]
+query_targets = snakemake.input["query_targets"]
+loci_to_merge_dir = snakemake.input["loci_to_merge"]
+orthofinder_dir = snakemake.input["orthofinder"]
 
+# outputs
+combined_output = snakemake.output["merged_targets"]
+renamed_sequences = snakemake.output["renamed_sequences"]
+
+# params
+species_name = snakemake.wildcards["ref_dataset"]
+
+# dev
+# inputs
+# species_name = "qos"
+# ref_targets = "output/010_captus/qos.mega353/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_coding_NT.fna"
+# query_targets = "output/010_captus/qos.peakall/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_coding_NT.fna"
+# loci_to_merge_dir = "output/020_overlaps/qos_min1000000.mega353.peakall/loci_to_merge"
+# orthofinder_dir = "output/005_grouped-targets/peakall/orthofinder"
+
+# outputs
+# combined_output = "test/merged_targets.fasta"
+# renamed_sequences = "test/renamed_sequences.csv"
+
+# any sequence that is recorded as a "locus to merge" will be renamed according
+# to the locus it is to be merged with
 merge_info = read_merge_info(loci_to_merge_dir)
 
-file_handles = {}
+# Any sequence that is in an orthogroup will be renamed according to that
+# orthogroup. The orthogroup text file also contains singletons.
+orthogroup_file = Path(orthofinder_dir, "Orthogroups", "Orthogroups.txt")
+orthogroup_info = read_orthogroup_info(orthogroup_file)
 
-# open a file handle for each locus that needs to be merged
+# we will accumulate the records per-locus so they can be output in order
+records_by_locus = {}
 
-# open a 
+# start with the reference loci
+ref_records = SeqIO.parse(ref_targets, "fasta")
 
-for 
+for record in ref_records:
+    new_id, locus = get_new_id(record.id, species_name)
+    record.id = new_id
+    if locus not in records_by_locus:
+        records_by_locus[locus] = []
+    records_by_locus[locus].append(record)
 
+# sort the query loci
+records_that_will_be_merged_by_locus = {}
+records_that_will_be_merged_by_orthogroup = {}
+
+query_records = SeqIO.parse(query_targets, "fasta")
+for record in query_records:
+    new_id, locus = get_new_id(record.id, species_name)
+    if locus in merge_info:
+        # these hits had overlaps with the mega353 hits
+        if locus not in records_that_will_be_merged_by_locus:
+            records_that_will_be_merged_by_locus[locus] = []
+        records_that_will_be_merged_by_locus[locus].append(record)
+    elif locus in orthogroup_info:
+        # these hits appear to be orthologs, based on orthofinder results from
+        # the peakall target file
+        if locus not in records_that_will_be_merged_by_orthogroup:
+            records_that_will_be_merged_by_orthogroup[locus] = []
+        records_that_will_be_merged_by_orthogroup[locus].append(record)
+    else:
+        # these had hits in the query, didn't overlap mega353 hits, and aren't
+        # orthlogs, so we will keep the current locus name.
+        record.id = new_id
+        if locus not in records_by_locus:
+            records_by_locus[locus] = []
+        records_by_locus[locus].append(record)
+
+# keep track of what we rename
+renamed_items = []
+
+# merge the records that had overlaps with the mega353 targets
+for locus, records in records_that_will_be_merged_by_locus.items():
+    new_locus = merge_info[locus]
+    for record in records:
+        # we are going to retain the original locus but move it to the
+        # "species" field, because multiple targets from peakall can overlap
+        # with the same mega353 target and they need to be identified
+        # separately.
+        new_spec = generate_new_spec(record.id, species_name)
+        output_id = f"{new_spec}-{new_locus}"
+        renamed_items.append((record.id, output_id))
+        record.id = output_id
+        if new_locus not in records_by_locus:
+            records_by_locus[new_locus] = []
+        records_by_locus[new_locus].append(record)
+
+# merge the records that were in orthogroups
+for locus, records in records_that_will_be_merged_by_orthogroup.items():
+    new_locus = orthogroup_info[locus]
+    for record in records:
+        # we are going to retain the original locus but move it to the
+        # "species" field to keep track of which target from peakall generated
+        # the hit.
+        new_spec = generate_new_spec(record.id, species_name)
+        output_id = f"{new_spec}-{new_locus}"
+        renamed_items.append((record.id, output_id))
+        record.id = output_id
+        if new_locus not in records_by_locus:
+            records_by_locus[new_locus] = []
+        records_by_locus[new_locus].append(record)
+
+with open(combined_output, "w") as f:
+    for locus, records in records_by_locus.items():
+        SeqIO.write(records, f, "fasta")
+
+with open(renamed_sequences, "w") as f:
+    writer = csv.writer(f)
+    writer.writerow(["old_id", "new_id"])
+    for old_id, new_id in renamed_items:
+        writer.writerow([old_id, new_id])

@@ -132,6 +132,78 @@ rule find_overlaps_target:
             ref_targets=["mega353"],
             query_targets=[x for x in all_query_datasets if x != "mega353"],
         ),
+        expand(
+            Path(
+                outdir,
+                "030_merged-target-sequences",
+                "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+                "merged_targets.fasta",
+            ),
+            ref_dataset=["qos", "pzijinensis"],
+            minlength=["1000000"],
+            ref_targets=["mega353"],
+            query_targets=["peakall"],
+        ),
+
+
+# only implemented for peakall vs mega353
+rule merge_extracted_sequences:
+    input:
+        ref_targets=Path(
+            outdir,
+            "010_captus",
+            "{ref_dataset}.{ref_targets}",
+            "min{minlength}",
+            "03_extractions",
+            "{ref_dataset}.{minlength}__captus-ext",
+            "01_coding_NUC",
+            "NUC_coding_NT.fna",
+        ),
+        query_targets=Path(
+            outdir,
+            "010_captus",
+            "{ref_dataset}.{ref_targets}",
+            "min{minlength}",
+            "03_extractions",
+            "{ref_dataset}.{minlength}__captus-ext",
+            "01_coding_NUC",
+            "NUC_coding_NT.fna",
+        ),
+        loci_to_merge=Path(
+            outdir,
+            "020_overlaps",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "loci_to_merge",
+        ),
+        orthofinder=Path(
+            outdir,
+            "005_grouped-targets",
+            "{query_targets}",
+            "orthofinder",
+        ),
+    output:
+        merged_targets=Path(
+            outdir,
+            "030_merged-target-sequences",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "merged_targets.fasta",
+        ),
+        renamed_sequences=Path(
+            outdir,
+            "030_merged-target-sequences",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "renamed_sequences.csv",
+        ),
+    log:
+        Path(
+            logdir,
+            "merge_extracted_sequences",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}.log",
+        ),
+    container:
+        biopython
+    script:
+        "src/merge_extracted_sequences.py"
 
 
 rule generate_lists_of_loci_to_merge:
@@ -239,24 +311,6 @@ rule orthofinder:
                 "orthofinder",
             )
         ),
-        og_txt=Path(
-            outdir,
-            "005_grouped-targets",
-            "{query_dataset}",
-            "orthofinder",
-            "Orthogroups",
-            "Orthogroups.txt",
-        ),
-        og_tsv=Path(
-            outdir,
-            "005_grouped-targets",
-            "{query_dataset}",
-            "orthofinder",
-            "Orthogroups",
-            "Orthogroups.tsv",
-        ),
-    # params:
-    #     outdir=lambda wildcards, output: Path(output.og_txt).parent.parent,
     log:
         Path(logdir, "orthofinder.{query_dataset}.log"),
     resources:
@@ -268,7 +322,6 @@ rule orthofinder:
     shadow:
         "minimal"
     shell:
-        "rm -r {output.outdir} && "
         "orthofinder "
         "-t {threads} "
         "-a {threads} "
