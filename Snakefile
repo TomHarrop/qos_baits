@@ -146,17 +146,7 @@ rule captus_extract_round2:
             "{ref_dataset}",
             "min{minlength}",
             "captus-assembly_extract.refs.json",
-        ),
-        annotated_assembly=Path(
-            outdir,
-            "040_captus_round2",
-            "{ref_dataset}",
-            "min{minlength}",
-            "03_extractions",
-            "{ref_dataset}.{minlength}__captus-ext",
-            "06_assembly_annotated",
-            "{ref_dataset}.{minlength}_hit_contigs.gff",
-        ),
+        )
     log:
         Path(logdir, "extract_round2", "{ref_dataset}.{minlength}.log"),
     benchmark:
