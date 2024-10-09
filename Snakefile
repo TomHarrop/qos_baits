@@ -50,7 +50,7 @@ captus = "docker://quay.io/biocontainers/captus:1.0.1--pyhdfd78af_2"
 orthofinder = "docker://davidemms/orthofinder:2.5.5.2"
 r = "docker://ghcr.io/tomharrop/r-containers:r2u_24.04_cv1"
 samtools = "docker://quay.io/biocontainers/samtools:1.21--h50ea8bc_0"
-qcat = "docker://quay.io/biocontainers/qcat:1.1.0--py_0"  
+qcat = "docker://quay.io/biocontainers/qcat:1.1.0--py_0"
 
 # globals
 outdir = Path("output")
@@ -603,6 +603,30 @@ rule group_targets_by_prefix:
         "src/group_targets_by_prefix.py"
 
 
+rule remove_mega_from_selected_families:
+    input:
+        targets=Path(
+            outdir,
+            "000_reference",
+            "query",
+            "{query_dataset}.selected_families_withmega.fasta",
+        ),
+        select_file=Path("data", "select_file.txt"),
+    output:
+        targets=Path(
+            outdir,
+            "000_reference",
+            "query",
+            "{query_dataset}.selected_families.fasta",
+        ),
+    log:
+        Path(logdir, "remove_mega_from_selected_families.{query_dataset}.log"),
+    container:
+        biopython
+    script:
+        "src/remove_mega_from_selected_families.py"
+
+
 rule select_families:
     input:
         targets=Path(
@@ -620,7 +644,7 @@ rule select_families:
             outdir,
             "000_reference",
             "query",
-            "{query_dataset}.selected_families.fasta",
+            "{query_dataset}.selected_families_withmega.fasta",
         ),
         report=Path(logdir, "select_families.{query_dataset}.report.txt"),
     log:
@@ -628,7 +652,7 @@ rule select_families:
     shadow:
         "minimal"
     container:
-        qcat # has biopython and pandas
+        qcat  # has biopython and pandas
     shell:
         "python3 {input.script} "
         "-filtered_target_file {output.targets} "
@@ -751,6 +775,12 @@ rule target:
     default_target: True
     input:
         rules.find_overlaps_target.input,
+        Path(
+            outdir,
+            "000_reference",
+            "query",
+            "mega353.selected_families.fasta",
+        ),
         expand(
             Path(
                 outdir,

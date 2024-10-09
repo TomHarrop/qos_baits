@@ -28,5 +28,4 @@ snakemake \
 	--keep-going \
 	--retries 0 \
 	--cores 64 \
-	--local-cores 2 \
-	find_overlaps_target
+	--local-cores 2
