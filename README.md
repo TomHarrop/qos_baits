@@ -7,7 +7,7 @@ Queen of Sheba genome (unreleased at time of writing, 2024-10-10).
 
 The process used these steps:
 
-1. Use [`captus extract`](https://github.com/edgardomortiz/Captus) to find
+1. [`captus extract`](https://github.com/edgardomortiz/Captus) was used to find
    "query" targets in "reference" genomes.
     - The **references** used were the Queen of Sheba genome and two
       Platanthera genomes from NCBI,
