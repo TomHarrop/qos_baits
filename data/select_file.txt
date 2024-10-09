@@ -1,0 +1,12 @@
+
+# The Drakaea elastica is from Diurideae and should be included.
+# Goodyera, Haemaria are both Goodyerinae in subfamily 
+# Orchidoideae and could potentially be included as further 
+# outgroup. Platanthera is of course already in our target list 
+# but I'm not sure if the same species, but we would not need two 
+# samples from the same genus. The others species are from other 
+# subfamilies and phylogenetically too distant for inclusion. 
+[Target_name]
+XZME
+VTUS
+MTHW

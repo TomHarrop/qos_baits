@@ -35,6 +35,14 @@ def get_remote_file(wildcards):
         raise ValueError(f"Unknown datatype {wildcards.datatype}")
 
 
+def get_remote_script(wildcards):
+    remote_script = remote_scripts[wildcards.script_name]
+    if isinstance(remote_script, snakemake.sourcecache.GithubFile):
+        return HTTP.remote(remote_script.get_path_or_uri(), keep_local=True)
+    else:
+        raise ValueError(f"Implement handler for {type(remote_script)}")
+
+
 # containers
 bbmap = "docker://quay.io/biocontainers/bbmap:39.01--h92535d8_1"
 biopython = "docker://quay.io/biocontainers/biopython:1.78"
@@ -42,6 +50,7 @@ captus = "docker://quay.io/biocontainers/captus:1.0.1--pyhdfd78af_2"
 orthofinder = "docker://davidemms/orthofinder:2.5.5.2"
 r = "docker://ghcr.io/tomharrop/r-containers:r2u_24.04_cv1"
 samtools = "docker://quay.io/biocontainers/samtools:1.21--h50ea8bc_0"
+qcat = "docker://quay.io/biocontainers/qcat:1.1.0--py_0"  
 
 # globals
 outdir = Path("output")
@@ -96,6 +105,15 @@ query_file_locations = {
 }
 
 all_query_datasets = query_file_locations.keys()
+
+
+remote_scripts = {
+    "filter_mega353.py": github(
+        repo="chrisjackson-pellicle/NewTargets",
+        path="filter_mega353.py",
+        tag="v1.0.0",
+    )
+}
 
 
 wildcard_constraints:
@@ -585,6 +603,41 @@ rule group_targets_by_prefix:
         "src/group_targets_by_prefix.py"
 
 
+rule select_families:
+    input:
+        targets=Path(
+            outdir,
+            "000_reference",
+            "query",
+            "{query_dataset}.deduplicated_renamed.fasta",
+        ),
+        select_file=Path("data", "select_file.txt"),
+        script=Path(
+            outdir, "000_reference", "external_scripts", "filter_mega353.py"
+        ),
+    output:
+        targets=Path(
+            outdir,
+            "000_reference",
+            "query",
+            "{query_dataset}.selected_families.fasta",
+        ),
+        report=Path(logdir, "select_families.{query_dataset}.report.txt"),
+    log:
+        Path(logdir, "select_families.{query_dataset}.log"),
+    shadow:
+        "minimal"
+    container:
+        qcat # has biopython and pandas
+    shell:
+        "python3 {input.script} "
+        "-filtered_target_file {output.targets} "
+        "-report_filename {output.report} "
+        "{input.targets} "
+        "{input.select_file} "
+        "&> {log}"
+
+
 rule rename_target_sequences:
     wildcard_constraints:
         query_dataset="|".join(all_query_datasets),
@@ -659,6 +712,20 @@ rule dedupe_targetfile:
         "uniquenames=t "
         "> {output.pipe} "
         "2> {log} "
+
+
+##########
+# UTIILS #
+##########
+
+
+rule download_remote_script:
+    input:
+        get_remote_script,
+    output:
+        Path(outdir, "000_reference", "external_scripts", "{script_name}"),
+    shell:
+        "cp {input} {output}"
 
 
 rule collect_remote_file:
