@@ -146,7 +146,7 @@ rule captus_extract_round2:
             "{ref_dataset}",
             "min{minlength}",
             "captus-assembly_extract.refs.json",
-        )
+        ),
     log:
         Path(logdir, "extract_round2", "{ref_dataset}.{minlength}.log"),
     benchmark:
@@ -190,9 +190,9 @@ rule find_overlaps_target:
         expand(
             Path(
                 outdir,
-                "020_overlaps",
+                "030_merged-target-sequences",
                 "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
-                "loci_to_merge",
+                "merged_targets.no_captus_paralogs.fasta",
             ),
             ref_dataset=all_reference_genomes,
             minlength=["1000000"],
@@ -202,6 +202,33 @@ rule find_overlaps_target:
 
 
 # only implemented for peakall vs mega353
+rule remove_captus_paralogs:
+    input:
+        targets=Path(
+            outdir,
+            "030_merged-target-sequences",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "merged_targets.fasta",
+        ),
+    output:
+        targets=Path(
+            outdir,
+            "030_merged-target-sequences",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "merged_targets.no_captus_paralogs.fasta",
+        ),
+    log:
+        Path(
+            logdir,
+            "remove_captus_paralogs",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}.log",
+        ),
+    container:
+        biopython
+    script:
+        "src/remove_captus_paralogs.py"
+
+
 rule merge_extracted_sequences:
     input:
         ref_targets=Path(
