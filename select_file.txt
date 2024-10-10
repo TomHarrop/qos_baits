@@ -7,6 +7,7 @@
 # samples from the same genus. The others species are from other 
 # subfamilies and phylogenetically too distant for inclusion. 
 [Target_name]
-XZME
-VTUS
+LELS
 MTHW
+VTUS
+XZME
