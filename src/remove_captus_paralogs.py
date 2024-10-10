@@ -4,7 +4,12 @@ from Bio import SeqIO
 from pathlib import Path
 from snakemake import logger
 import logging
-import re
+
+
+def append_to_locus(record, locus, locus_dict):
+    if locus not in locus_dict:
+        locus_dict[locus] = []
+    locus_dict[locus].append(record)
 
 
 def split_record_id(record_id):
@@ -21,40 +26,47 @@ def split_record_id(record_id):
 def main():
     # we will accumulate the records per-locus so they can be output in order
     records_by_locus = {}
-    loci_with_paralogs = {}
+    discarded_paralogs = {}
 
+    logger.info(f"Reading input from {targets_with_paralogs}")
     input_target_handle = SeqIO.parse(targets_with_paralogs, "fasta")
+
+    i, j, k = 0, 0, 0
 
     for record in input_target_handle:
         seq_name, locus = split_record_id(record.id)
-        if "paralog" in seq_name:
-            paralog_number = re.search(r"paralog(\d+)", seq_name).group(1)
-            if locus not in loci_with_paralogs:
-                loci_with_paralogs[locus] = {}
-            loci_with_paralogs[locus][paralog_number] = record
+        if "paralog" not in seq_name:
+            i += 1
+            append_to_locus(record, locus, records_by_locus)
+        # we're only trying to resolve sequences that Captus *knows* are
+        # paralogs
+        elif "paralog" in seq_name:
+            if "[hit=00]" in record.description:
+                j += 1
+                append_to_locus(record, locus, records_by_locus)
+            else:
+                k += 1
+                append_to_locus(record, locus, discarded_paralogs)
         else:
-            if locus in records_by_locus:
-                logger.error(f"Duplicate locus: {locus}")
-                logger.error(record)
-                raise KeyError(f"Duplicate locus: {locus}")
-            records_by_locus[locus] = record
+            logger.error("What is this place?")
+            raise ValueError(f"Can't do anything with {record.id}")
 
-    for locus, paralog_dict in loci_with_paralogs.items():
-        paralog_numbers = list(paralog_dict.keys())
-        lowest_paralog = min(paralog_numbers)
-        logger.info(f"Choosing paralog {lowest_paralog} for locus {locus}")
-        chosen_record = paralog_dict[lowest_paralog]
-        logger.info(chosen_record.id)
-        seq_name, locus = split_record_id(chosen_record.id)
-        if locus in records_by_locus:
-            logger.error(f"Duplicate locus: {locus}")
-            logger.error(record)
-            raise KeyError(f"Duplicate locus: {locus}")
-        records_by_locus[locus] = chosen_record
+    logger.info(f"Outputting records for {len(records_by_locus)} loci.")
+    logger.info(
+        f"{i} records were not identified as paralogs by Captus. These are kept as-is."
+    )
+    logger.info(
+        f'{j} records were identified as paralogs by Captus and are kept because they had "[hit=00]" in the description.'
+    )
+    logger.info(
+        f"{k} records with lower hit scores were discarded for {len(discarded_paralogs)} loci."
+    )
 
     with open(output_target, "w") as f:
-        for locus, records in records_by_locus.items():
-            SeqIO.write(records, f, "fasta")
+        for locus, record_list in records_by_locus.items():
+            
+            for record in record_list:
+                SeqIO.write(record, f, "fasta")
 
 
 if __name__ == "__main__":
