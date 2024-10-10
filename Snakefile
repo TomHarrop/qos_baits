@@ -262,7 +262,7 @@ rule merge_extracted_sequences:
         query_targets=Path(
             outdir,
             "010_captus",
-            "{ref_dataset}.{ref_targets}",
+            "{ref_dataset}.{query_targets}",
             "min{minlength}",
             "03_extractions",
             "{ref_dataset}.{minlength}__captus-ext",
@@ -318,6 +318,12 @@ rule generate_lists_of_loci_to_merge:
             outdir,
             "020_overlaps",
             "{ref_dataset}_min{minlength}.{ref_targets}.{ref_targets}",
+            "overlapping_loci.csv",
+        ),
+        query_self_overlaps=Path(
+            outdir,
+            "020_overlaps",
+            "{ref_dataset}_min{minlength}.{query_targets}.{query_targets}",
             "overlapping_loci.csv",
         ),
     output:
@@ -486,6 +492,16 @@ rule captus_extract:
             "{ref_dataset}.{minlength}__captus-ext",
             "06_assembly_annotated",
             "{ref_dataset}.{minlength}_hit_contigs.gff",
+        ),
+        nuc_coding=Path(
+            outdir,
+            "010_captus",
+            "{ref_dataset}.{query_dataset}",
+            "min{minlength}",
+            "03_extractions",
+            "{ref_dataset}.{minlength}__captus-ext",
+            "01_coding_NUC",
+            "NUC_coding_NT.fna",
         ),
     log:
         Path(

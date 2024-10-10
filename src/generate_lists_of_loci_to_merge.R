@@ -8,6 +8,7 @@ if (exists("snakemake")) {
   # inputs
   overlapping_loci_file <- snakemake@input[["overlapping_loci"]]
   ref_self_overlaps_file <- snakemake@input[["ref_self_overlaps"]]
+  query_self_overlaps_file <- snakemake@input[["query_self_overlaps"]]
 
   # outputs
   outdir <- snakemake@output[["outdir"]]
@@ -64,6 +65,11 @@ if (ref_no_paralogs[, any(ref_hit_group_name != query_hit_group_name)]) {
   stop("Giving up. There seem to be overlapping reference loci.")
 }
 
+# are any of the separate query loci actually the same
+query_self_overlaps <- fread(query_self_overlaps_file)
+query_no_paralogs <- remove_paralogs_from_dt(query_self_overlaps)
+query_no_paralogs[ref_hit_group_name != query_hit_group_name]
+
 # Now list loci that overlap each reference loci
 overlapping_loci <- fread(overlapping_loci_file)
 paralogs_exluded <- remove_paralogs_from_dt(overlapping_loci)
@@ -77,6 +83,13 @@ query_loci_per_ref_locus <- paralogs_exluded[
     query_hit = unique(query_hit_group_name),
     seqname = unique(query_hit_seqnames)
   ),
+  by = ref_hit_group_name
+]
+
+# drop paralog numbers from the ref_hit, because these aren't in the target
+# file.
+query_loci_per_ref_locus[
+  , ref_hit_group_name := gsub("__.*", "", ref_hit_group_name),
   by = ref_hit_group_name
 ]
 
