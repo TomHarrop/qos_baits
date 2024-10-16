@@ -96,7 +96,7 @@ query_file_locations = {
     ),
     # Downloaded from
     # https://datadryad.org/stash/dataset/doi:10.5061/dryad.z08kprrbj
-    "peakall": Path("data", "reference", "S1-2FinalSeq.fa"),
+    "peakall12": Path("data", "reference", "S1-2FinalSeq.fa"),
     "peakall35": Path("data", "reference", "S3-5FinalSeq.fa"),
     # Downloaded from
     # https://datadryad.org/stash/dataset/doi:10.5061/dryad.sj3tx96bn
@@ -147,7 +147,7 @@ rule captus_extract_round2:
             ref_dataset=["qos", "pzijinensis"],
             minlength=["1000000"],
             ref_targets=["mega353"],
-            query_targets=["peakall", "peakall35"],
+            query_targets=["peakall12", "peakall35"],
         ),
     output:
         outdir=directory(
