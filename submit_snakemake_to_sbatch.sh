@@ -28,4 +28,5 @@ snakemake \
 	--keep-going \
 	--retries 0 \
 	--cores 64 \
-	--local-cores 2
+	--local-cores 2 \
+	output/030_merged-target-sequences/qos_min1000000.mega353.peakall35/merged_targets.no_captus_paralogs.fasta
