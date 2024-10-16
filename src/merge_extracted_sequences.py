@@ -194,8 +194,8 @@ def main():
 if __name__ == "__main__":
 
     # inputs
-    ref_targets = snakemake.input["ref_targets"]
-    query_targets = snakemake.input["query_targets"]
+    ref_targets = snakemake.params["ref_targets"]
+    query_targets = snakemake.params["query_targets"]
     loci_to_merge_dir = snakemake.input["loci_to_merge"]
     orthofinder_dir = snakemake.input["orthofinder"]
 

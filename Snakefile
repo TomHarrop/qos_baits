@@ -250,25 +250,12 @@ rule remove_captus_paralogs:
 
 rule merge_extracted_sequences:
     input:
-        ref_targets=Path(
+        captus_directory=Path(
             outdir,
             "010_captus",
             "{ref_dataset}.{ref_targets}",
             "min{minlength}",
             "03_extractions",
-            "{ref_dataset}.{minlength}__captus-ext",
-            "01_coding_NUC",
-            "NUC_coding_NT.fna",
-        ),
-        query_targets=Path(
-            outdir,
-            "010_captus",
-            "{ref_dataset}.{query_targets}",
-            "min{minlength}",
-            "03_extractions",
-            "{ref_dataset}.{minlength}__captus-ext",
-            "01_coding_NUC",
-            "NUC_coding_NT.fna",
         ),
         loci_to_merge=Path(
             outdir,
@@ -294,6 +281,19 @@ rule merge_extracted_sequences:
             "030_merged-target-sequences",
             "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
             "renamed_sequences.csv",
+        ),
+    params:
+        ref_targets=lambda wildcards, input: Path(
+            input.captus_directory,
+            f"{wildcards.ref_dataset}.{wildcards.minlength}__captus-ext",
+            "01_coding_NUC",
+            "NUC_coding_NT.fna",
+        ),
+        query_targets=lambda wildcards, input: Path(
+            input.captus_directory,
+            f"{wildcards.ref_dataset}.{wildcards.minlength}__captus-ext",
+            "01_coding_NUC",
+            "NUC_coding_NT.fna",
         ),
     log:
         Path(
@@ -350,25 +350,12 @@ rule generate_lists_of_loci_to_merge:
 
 rule find_overlapping_loci:
     input:
-        query_gff=Path(
+        captus_directory=Path(
             outdir,
             "010_captus",
             "{ref_dataset}.{query_targets}",
             "min{minlength}",
             "03_extractions",
-            "{ref_dataset}.{minlength}__captus-ext",
-            "06_assembly_annotated",
-            "{ref_dataset}.{minlength}_hit_contigs.gff",
-        ),
-        ref_gff=Path(
-            outdir,
-            "010_captus",
-            "{ref_dataset}.{ref_targets}",
-            "min{minlength}",
-            "03_extractions",
-            "{ref_dataset}.{minlength}__captus-ext",
-            "06_assembly_annotated",
-            "{ref_dataset}.{minlength}_hit_contigs.gff",
         ),
         fai=Path(
             outdir, "000_reference", "reference", "{ref_dataset}.fasta.fai"
@@ -388,6 +375,18 @@ rule find_overlapping_loci:
         ),
     params:
         maxgap=int(10000),  # maxgap between "proximate" loci
+        query_gff=lambda wildcards, input: Path(
+            input.captus_directory,
+            f"{wildcards.ref_dataset}.{wildcards.minlength}__captus-ext",
+            "06_assembly_annotated",
+            f"{wildcards.ref_dataset}.{wildcards.minlength}_hit_contigs.gff",
+        ),
+        ref_gff=lambda wildcards, input: Path(
+            input.captus_directory,
+            f"{wildcards.ref_dataset}.{wildcards.minlength}__captus-ext",
+            "06_assembly_annotated",
+            f"{wildcards.ref_dataset}.{wildcards.minlength}_hit_contigs.gff",
+        ),
     log:
         Path(
             logdir,
@@ -483,26 +482,6 @@ rule captus_extract:
             "{ref_dataset}.{query_dataset}",
             "min{minlength}",
             "captus-assembly_extract.refs.json",
-        ),
-        annotated_assembly=Path(
-            outdir,
-            "010_captus",
-            "{ref_dataset}.{query_dataset}",
-            "min{minlength}",
-            "03_extractions",
-            "{ref_dataset}.{minlength}__captus-ext",
-            "06_assembly_annotated",
-            "{ref_dataset}.{minlength}_hit_contigs.gff",
-        ),
-        nuc_coding=Path(
-            outdir,
-            "010_captus",
-            "{ref_dataset}.{query_dataset}",
-            "min{minlength}",
-            "03_extractions",
-            "{ref_dataset}.{minlength}__captus-ext",
-            "01_coding_NUC",
-            "NUC_coding_NT.fna",
         ),
     log:
         Path(

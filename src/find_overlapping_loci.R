@@ -6,8 +6,8 @@ if (exists("snakemake")) {
   sink(log, append = TRUE, type = "output")
 
   # inputs
-  query_gff_file <- snakemake@input[["query_gff"]]
-  ref_gff_file <- snakemake@input[["ref_gff"]]
+  query_gff_file <- snakemake@params[["query_gff"]]
+  ref_gff_file <- snakemake@params[["ref_gff"]]
   fai_file <- snakemake@input[["fai"]]
 
   # outputs
