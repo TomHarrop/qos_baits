@@ -350,10 +350,17 @@ rule generate_lists_of_loci_to_merge:
 
 rule find_overlapping_loci:
     input:
-        captus_directory=Path(
+        query_captus_directory=Path(
             outdir,
             "010_captus",
             "{ref_dataset}.{query_targets}",
+            "min{minlength}",
+            "03_extractions",
+        ),
+        ref_captus_directory=Path(
+            outdir,
+            "010_captus",
+            "{ref_dataset}.{ref_targets}",
             "min{minlength}",
             "03_extractions",
         ),
@@ -376,13 +383,13 @@ rule find_overlapping_loci:
     params:
         maxgap=int(10000),  # maxgap between "proximate" loci
         query_gff=lambda wildcards, input: Path(
-            input.captus_directory,
+            input.query_captus_directory,
             f"{wildcards.ref_dataset}.{wildcards.minlength}__captus-ext",
             "06_assembly_annotated",
             f"{wildcards.ref_dataset}.{wildcards.minlength}_hit_contigs.gff",
         ),
         ref_gff=lambda wildcards, input: Path(
-            input.captus_directory,
+            input.ref_captus_directory,
             f"{wildcards.ref_dataset}.{wildcards.minlength}__captus-ext",
             "06_assembly_annotated",
             f"{wildcards.ref_dataset}.{wildcards.minlength}_hit_contigs.gff",

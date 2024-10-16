@@ -15,11 +15,11 @@ if (exists("snakemake")) {
   # params
 } else {
   overlapping_loci_file <-
-    "output/020_overlaps/pzijinensis_min1000000.mega353.peakall/overlapping_loci.csv"
+    "output/020_overlaps/qos_min1000000.mega353.peakall35/overlapping_loci.csv"
   ref_self_overlaps_file <-
-    "output/020_overlaps/pzijinensis_min1000000.mega353.mega353/overlapping_loci.csv"
+    "output/020_overlaps/qos_min1000000.mega353.mega353/overlapping_loci.csv"
   query_self_overlaps_file <-
-    "output/020_overlaps/pzijinensis_min1000000.peakall.peakall/overlapping_loci.csv"
+    "output/020_overlaps/qos_min1000000.peakall35.peakall35/overlapping_loci.csv"
   outdir <- "test/loci_to_merge"
 }
 
@@ -68,7 +68,6 @@ if (ref_no_paralogs[, any(ref_hit_group_name != query_hit_group_name)]) {
 # are any of the separate query loci actually the same
 query_self_overlaps <- fread(query_self_overlaps_file)
 query_no_paralogs <- remove_paralogs_from_dt(query_self_overlaps)
-query_no_paralogs[ref_hit_group_name != query_hit_group_name]
 
 # Now list loci that overlap each reference loci
 overlapping_loci <- fread(overlapping_loci_file)
