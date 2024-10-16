@@ -57,9 +57,9 @@ def read_orthogroup_info(orthogroup_file):
 # inputs
 # species_name = "qos"
 # ref_targets = "output/010_captus/qos.mega353/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_coding_NT.fna"
-# query_targets = "output/010_captus/qos.peakall/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_coding_NT.fna"
-# loci_to_merge_dir = "output/020_overlaps/qos_min1000000.mega353.peakall/loci_to_merge"
-# orthofinder_dir = "output/005_grouped-targets/peakall/orthofinder"
+# query_targets = "output/010_captus/qos.peakall35/min1000000/03_extractions/qos.1000000__captus-ext/01_coding_NUC/NUC_coding_NT.fna"
+# loci_to_merge_dir = "output/020_overlaps/qos_min1000000.mega353.peakall35/loci_to_merge"
+# orthofinder_dir = "output/005_grouped-targets/peakall35/orthofinder"
 
 # outputs
 # combined_output = "test/merged_targets.fasta"
@@ -86,7 +86,7 @@ def main():
     records_by_locus = {}
 
     # start with the reference loci
-    logger.info(f"Reading reference targets")
+    logger.info(f"Reading reference targets from {ref_targets}")
     ref_records = SeqIO.parse(ref_targets, "fasta")
 
     i = 0
@@ -99,7 +99,7 @@ def main():
         records_by_locus[locus].append(record)
 
     logger.info(
-        f"{ref_targets} contains {i} reference loci in {len(records_by_locus)} loci."
+        f"Read {i} reference loci in {len(records_by_locus)} loci."
     )
 
     # sort the query loci
@@ -107,6 +107,7 @@ def main():
     records_that_will_be_merged_by_orthogroup = {}
     i, j, k = 0, 0, 0
 
+    logger.info(f"Reading query targets from {query_targets}")
     query_records = SeqIO.parse(query_targets, "fasta")
     for record in query_records:
         new_id, locus = get_new_id(record.id, species_name)

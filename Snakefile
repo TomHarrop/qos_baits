@@ -250,7 +250,14 @@ rule remove_captus_paralogs:
 
 rule merge_extracted_sequences:
     input:
-        captus_directory=Path(
+        query_captus_directory=Path(
+            outdir,
+            "010_captus",
+            "{ref_dataset}.{query_targets}",
+            "min{minlength}",
+            "03_extractions",
+        ),
+        ref_captus_directory=Path(
             outdir,
             "010_captus",
             "{ref_dataset}.{ref_targets}",
@@ -284,13 +291,13 @@ rule merge_extracted_sequences:
         ),
     params:
         ref_targets=lambda wildcards, input: Path(
-            input.captus_directory,
+            input.ref_captus_directory,
             f"{wildcards.ref_dataset}.{wildcards.minlength}__captus-ext",
             "01_coding_NUC",
             "NUC_coding_NT.fna",
         ),
         query_targets=lambda wildcards, input: Path(
-            input.captus_directory,
+            input.query_captus_directory,
             f"{wildcards.ref_dataset}.{wildcards.minlength}__captus-ext",
             "01_coding_NUC",
             "NUC_coding_NT.fna",
