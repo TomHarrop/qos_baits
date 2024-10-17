@@ -92,9 +92,11 @@ sequences into loci and some of the loci target mega353 loci, but aren't named
 as such. This is discussed in their
 [publication](https://doi.org/10.1111/1755-0998.13327).
 
-#### a. A simple way of grouping sequences into loci is to run them through
-orthofinder, and then rename the sequences by orthogroup. You need to group
-targets by species before you do this (see `src/group_targets_by_prefix.sh`).
+#### a. A simple way of grouping sequences into loci is to run them through orthofinder
+
+After Orthofinder, you can rename the sequences by orthogroup. You need to
+group targets by species before you do this (see
+`src/group_targets_by_prefix.sh`).
 
 ```bash
 orthofinder \
