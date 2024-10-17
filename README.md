@@ -92,7 +92,7 @@ sequences into loci and some of the loci target mega353 loci, but aren't named
 as such. This is discussed in their
 [publication](https://doi.org/10.1111/1755-0998.13327).
 
-A simple way of grouping sequences into loci is to run them through
+#### a. A simple way of grouping sequences into loci is to run them through
 orthofinder, and then rename the sequences by orthogroup. You need to group
 targets by species before you do this (see `src/group_targets_by_prefix.sh`).
 
@@ -109,11 +109,32 @@ orthofinder \
 The orthofinder directory will contain a file called `Orthogroups.txt`, which
 lists target sequences by orthogroup.
 
-Finding overlaps between different sets of targets is more complex. My approach
-uses the `rtracklayer` R package to read the GFFs from Captus, then uses
-`GenomicRanges` to convert them into `GRangesList` objects grouped by Name,
-then the `findOverlaps` method to find overlapping loci. See the script
-`src/find_overlapping_loci.R`.
+#### b. Finding overlaps between different sets of targets
+
+This is more complex. My approach uses the `rtracklayer` R package to read the
+GFFs from Captus, then uses `GenomicRanges` to convert them into `GRangesList`
+objects grouped by Name, then the `findOverlaps` method to find overlapping
+loci. See the script `src/find_overlapping_loci.R`.
+
+#### c. Merge loci
+
+Once you have identified orthologous and/or overlapping loci, you can merge
+sequences to generate loci. This requires renaming sequences according to the
+format `[sequence_id]-[locus]`. See the script
+`src/merge_extracted_sequences.py` for an example.
+
+This is my approach:
+
+- sequences are added to mega353 loci if there is an overlap between the hit
+and a known mega353 locus
+- if there is no overlap, but they have been grouped into an orthogroup, the
+orthogroup ID is used as the locus ID
+- sequences that didn't overlap mega353 loci and weren't grouped into
+  orthogroups are left as-is.
+
+Doing this will make downstream analysis simplier because Captus and Hybpiper
+both understand the `[sequence_id]-[locus]` format. For example, Captus will
+only extract one sequence per locus, which makes the alignments less complex.
 
 ## Workflow
 
