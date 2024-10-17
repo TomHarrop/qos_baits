@@ -57,7 +57,7 @@ reformat.sh \
 
 ### 2. Prepare your genome
 
-- **optional**: remove short contigs to reduce run time
+- remove short contigs to reduce run time (**optional**)
 
 ```bash
 reformat.sh \
@@ -68,7 +68,8 @@ reformat.sh \
 
 ### 3. Run captus extract
 
-This step uses your genome as a "sample" and the loci in the target files as markers. I'm not sure if this is supported use of Captus but it seems to work.
+This step uses your genome as a "sample" and the loci in the target files as
+markers. I'm not sure if this is supported use of Captus but it seems to work.
 
 ```bash
 captus_assembly extract \
@@ -78,7 +79,37 @@ captus_assembly extract \
   --nuc_refs deduplicated_renamed.fasta
 ```
 
-The `03_extractions` folder will contain a GFF3 file of hit locations on the genome, and a file called `NUC_coding_NT.fna` that includes the sequence of the target locus extracted from the genome.
+The `03_extractions` folder will contain a GFF3 file of hit locations on the
+genome, and a file called `NUC_coding_NT.fna` that includes the sequence of the
+target locus extracted from the genome.
+
+### 4. Deal with overlapping or orthologous loci (**optional**)
+
+Depending on what you are using your baits for you may need to deal with
+redundancy in the input target file. For example, the target files from
+[Peakall *et al*.](https://doi.org/10.1111/1755-0998.13327) don't group
+sequences into loci and some of the loci target mega353 loci, but aren't named
+as such. This is discussed in their
+[publication](https://doi.org/10.1111/1755-0998.13327).
+
+A simple way of grouping sequences into loci is to run them through
+orthofinder, and then rename the sequences by orthogroup. You need to group
+targets by species before you do this (see `src/group_targets_by_prefix.sh`).
+
+```bash
+orthofinder \
+  -d \
+  -M msa \
+  -S diamond_ultra_sens \
+  -oa \
+  -o OrthoFinder \
+  -f grouped_targets 
+```
+
+The orthofinder directory will contain a file called `Orthogroups.txt`, which
+lists target sequences by orthogroup.
+
+Finding overlaps between different sets of targets is more complex. My approach
 
 ## Workflow
 
