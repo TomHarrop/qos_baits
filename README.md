@@ -127,7 +127,7 @@ format `[sequence_id]-[locus]`. See the script
 
 This is my approach:
 
-- sequences are added to mega353 loci if there is an overlap between the hit
+- sequences are renamed to mega353 loci if there is an overlap between the hit
 and a known mega353 locus
 - if there is no overlap, but they have been grouped into an orthogroup, the
 orthogroup ID is used as the locus ID
@@ -138,6 +138,16 @@ Doing this will make downstream analysis simplier because Captus and Hybpiper
 both understand the `[sequence_id]-[locus]` format. For example, Captus will
 only extract one sequence per locus, which makes the alignments less complex.
 
+Additionally, I removed hits that had been identified as paralogs by Captus.
+Anything that contains a double underscore followed by an integer greater than
+zero is a paralog (e.g. `mysequence__01`). I removed all the paralogs except
+the one identified by `[hit=00]` in the description field.
+
+## 5. Run the derived target file through Captus again (**optional**)
+
+This allows you to 
+
+
 ## Workflow
 
-![](assets/graph.svg)
+![Snakemake graph](assets/graph.svg)
