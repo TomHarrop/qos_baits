@@ -110,6 +110,10 @@ The orthofinder directory will contain a file called `Orthogroups.txt`, which
 lists target sequences by orthogroup.
 
 Finding overlaps between different sets of targets is more complex. My approach
+uses the `rtracklayer` R package to read the GFFs from Captus, then uses
+`GenomicRanges` to convert them into `GRangesList` objects grouped by Name,
+then the `findOverlaps` method to find overlapping loci. See the script
+`src/find_overlapping_loci.R`.
 
 ## Workflow
 
