@@ -24,6 +24,62 @@ The process used these steps:
    [OrthoFinder](https://github.com/davidemms/OrthoFinder) and renamed
    according to their orthogroup.
 
+## How to run the workflow on your dataset
+
+### 1. Prepare your target files
+
+- deduplicate the target file by running it through `dedupe.sh`:
+
+```bash
+dedupe.sh \
+  in=output/000_reference/query/mega353.fasta.gz \
+  out=deduplicated.fasta \
+  ascending=t \
+  exact=t \
+  fixjunk=t \
+  maxedits=0 \
+  maxsubs=0 \
+  sort=name \
+  touppercase=t \
+  uniquenames=t
+```
+
+- remove any unusual headers from the FASTA file with `reformat.sh`
+
+```bash
+reformat.sh \
+  in=deduplicated.fasta \
+  out=deduplicated_renamed.fasta \
+  trimreaddescription=t \
+  fixheaders=t \
+  fixjunk=t
+```
+
+### 2. Prepare your genome
+
+- **optional**: remove short contigs to reduce run time
+
+```bash
+reformat.sh \
+  in=genome.fasta.gz \
+  minlength=100000 \
+  out=genome.100000.fasta
+```
+
+### 3. Run captus extract
+
+This step uses your genome as a "sample" and the loci in the target files as markers. I'm not sure if this is supported use of Captus but it seems to work.
+
+```bash
+captus_assembly extract \
+  --captus_assemblies_dir 02_assemblies \
+  --fastas genome.100000.fasta \
+  --out 03_extractions \
+  --nuc_refs deduplicated_renamed.fasta
+```
+
+The `03_extractions` folder will contain a GFF3 file of hit locations on the genome, and a file called `NUC_coding_NT.fna` that includes the sequence of the target locus extracted from the genome.
+
 ## Workflow
 
 ![](assets/graph.svg)
