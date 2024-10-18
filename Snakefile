@@ -98,6 +98,8 @@ query_file_locations = {
     # https://datadryad.org/stash/dataset/doi:10.5061/dryad.z08kprrbj
     "peakall12": Path("data", "reference", "S1-2FinalSeq.fa"),
     "peakall35": Path("data", "reference", "S3-5FinalSeq.fa"),
+    # cat S1-2FinalSeq.fa S3-5FinalSeq.fa > peakallboth.fa
+    "peakallboth": Path("data", "reference", "peakallboth.fa"),
     # Downloaded from
     # https://datadryad.org/stash/dataset/doi:10.5061/dryad.sj3tx96bn
     "orchidinae205": Path(
@@ -200,7 +202,7 @@ rule captus_extract_round2:
             ref_dataset=["qos", "pzijinensis"],
             minlength=["1000000"],
             ref_targets=["mega353"],
-            query_targets=["peakall12", "peakall35"],
+            query_targets=["peakall12", "peakall35", "peakallboth"],
         ),
     output:
         outdir=directory(
@@ -865,5 +867,5 @@ rule target:
         # updated original targetfiles
         expand(
             rules.rename_original_targetfile.output,
-            query_dataset=["peakall12", "peakall35"],
+            query_dataset=["peakall12", "peakall35", "peakallboth"],
         ),
