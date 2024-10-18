@@ -124,6 +124,65 @@ wildcard_constraints:
     query_dataset="|".join(all_query_datasets),
 
 
+#########################################################
+# RENAME THE ORIGINAL TARGETFILES TO MATCH MERGING INFO #
+#########################################################
+
+
+rule rename_original_targetfile:
+    input:
+        targetfile=Path(
+            outdir,
+            "000_reference",
+            "query",
+            "{query_dataset}.deduplicated_renamed.fasta",
+        ),
+        orthofinder=Path(
+            outdir,
+            "005_grouped-targets",
+            "{query_dataset}",
+            "orthofinder",
+        ),
+        loci_to_merge=expand(
+            Path(
+                outdir,
+                "020_overlaps",
+                "{ref_dataset}_min{minlength}.{ref_targets}.{{query_dataset}}",
+                "loci_to_merge",
+            ),
+            ref_dataset=["qos", "pzijinensis"],
+            minlength=["1000000"],
+            ref_targets=["mega353"],
+        ),
+    output:
+        renamed_targetfile=Path(
+            outdir,
+            "050_updated-targetfiles",
+            "{query_dataset}",
+            "renamed_targetfile.fasta",
+        ),
+        renamed_sequences=Path(
+            outdir,
+            "050_updated-targetfiles",
+            "{query_dataset}",
+            "renamed_targets.csv",
+        ),
+    log:
+        Path(logdir, "rename_original_targetfile", "{query_dataset}.log"),
+    container:
+        biopython
+    script:
+        "src/rename_original_targetfile.py"
+
+
+rule dummy_target:
+    input:
+        expand(
+            rules.rename_original_targetfile.output,
+            query_dataset=["peakall12", "peakall35"],
+        ),
+
+
 #####################################
 # RE-RUN CAPTUS WITH MERGED TARGETS #
 #####################################
