@@ -175,12 +175,6 @@ rule rename_original_targetfile:
         "src/rename_original_targetfile.py"
 
 
-rule dummy_target:
-    input:
-        expand(
-            rules.rename_original_targetfile.output,
-            query_dataset=["peakall12", "peakall35"],
-        ),
 
 
 #####################################
@@ -323,11 +317,18 @@ rule merge_extracted_sequences:
             "min{minlength}",
             "03_extractions",
         ),
-        loci_to_merge=Path(
-            outdir,
-            "020_overlaps",
-            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
-            "loci_to_merge",
+        loci_to_merge=expand(
+            Path(
+                outdir,
+                "020_overlaps",
+                "{ref_dataset}_min{minlength}.{ref_targets}.{{query_targets}}",
+                "loci_to_merge",
+            ),
+            # hardcoding for this particular pipeline
+            # TODO: generalise
+            ref_dataset=["qos", "pzijinensis"],
+            minlength=["1000000"],
+            ref_targets=["mega353"],
         ),
         orthofinder=Path(
             outdir,
@@ -860,4 +861,9 @@ rule target:
             ),
             ref_dataset=["qos", "pzijinensis"],
             minlength=["1000000"],
+        ),
+        # updated original targetfiles
+        expand(
+            rules.rename_original_targetfile.output,
+            query_dataset=["peakall12", "peakall35"],
         ),

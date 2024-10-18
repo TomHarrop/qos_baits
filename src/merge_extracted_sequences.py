@@ -70,9 +70,23 @@ def main():
     # This is a dict of sequence ID to locus to merge to. Any sequence that is
     # recorded as a "locus to merge" will be renamed according to the locus it
     # is to be merged with
-    logger.info(f"Reading merge info from {loci_to_merge_dir}")
-    merge_info = read_merge_info(loci_to_merge_dir)
-    logger.info(f"Loci matching {sorted(set(merge_info.values()))} will be merged.")
+
+    merge_info = {}
+    for loci_to_merge_dir in loci_to_merge_dirs:
+        logger.info(f"Reading merge info from {loci_to_merge_dir}")
+        my_merge_info = read_merge_info(loci_to_merge_dir)
+        duplicate_keys = set(merge_info.keys()) & set(my_merge_info.keys())
+        if duplicate_keys:
+            mismatched_keys = {
+                k for k in duplicate_keys if my_merge_info[k] != merge_info[k]
+            }
+            if mismatched_keys:
+                raise ValueError(f"Sequence {mismatched_keys} matched different loci.")
+        merge_info.update(my_merge_info)
+
+    logger.info(
+        f"Sequences overlapping loci {sorted(set(merge_info.values()))} were found. The sequences will be renamed."
+    )
 
     # Any sequence that is in an orthogroup will be renamed according to that
     # orthogroup. The orthogroup text file also contains singletons.
@@ -98,9 +112,7 @@ def main():
             records_by_locus[locus] = []
         records_by_locus[locus].append(record)
 
-    logger.info(
-        f"Read {i} reference loci in {len(records_by_locus)} loci."
-    )
+    logger.info(f"Read {i} reference loci in {len(records_by_locus)} loci.")
 
     # sort the query loci
     records_that_will_be_merged_by_locus = {}
@@ -197,7 +209,7 @@ if __name__ == "__main__":
     # inputs
     ref_targets = snakemake.params["ref_targets"]
     query_targets = snakemake.params["query_targets"]
-    loci_to_merge_dir = snakemake.input["loci_to_merge"]
+    loci_to_merge_dirs = snakemake.input["loci_to_merge"]
     orthofinder_dir = snakemake.input["orthofinder"]
 
     # outputs
