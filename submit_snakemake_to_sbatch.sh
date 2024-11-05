@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=qosbaits
-#SBATCH --time=0-01:00:00
+#SBATCH --time=0-12:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=8g
@@ -26,7 +26,7 @@ printf "TMPDIR: %s\n" "${TMPDIR}"
 snakemake \
 	--profile petrichor_tmp \
 	--keep-going \
-	--retries 0 \
+	--retries 2 \
 	--cores 64 \
 	--local-cores 2 \
-	output/060_target-file-stats/qos_min1000000.mega353.peakall12/maxedits0/kmer_counts.kmc_pre
+	stats_target

@@ -158,8 +158,22 @@ rule count_kmers_in_extracted_targetfiles:
             "maxedits{maxedit}",
             "kmer_counts.kmc_suf",
         ),
+        counts=Path(
+            outdir,
+            "060_target-file-stats",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "maxedits{maxedit}",
+            "kmer_counts.txt",
+        ),
+        stats=Path(
+            outdir,
+            "060_target-file-stats",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "maxedits{maxedit}",
+            "kmer_counts.json",
+        ),
     params:
-        prefix=lambda wildcards, output: Path(output.kmc_pre).with_suffix(""),
+        outdir=lambda wildcards, output: Path(output.kmc_pre).parent,
     log:
         Path(
             logdir,
@@ -169,7 +183,7 @@ rule count_kmers_in_extracted_targetfiles:
     threads: lambda wildcards, attempt: int(12 * attempt)
     resources:
         mem_mb=lambda wildcards, attempt: int(32e3 * attempt),
-        time=lambda wildcards, attempt: int(30 * attempt),
+        time=lambda wildcards, attempt: int(10 * attempt),
     shadow:
         "minimal"
     container:
@@ -177,13 +191,24 @@ rule count_kmers_in_extracted_targetfiles:
     shell:
         "kmc "
         "-k80 "
+        "-ci1 "
         '"-m$(( {resources.mem_mb}/1000 ))" '
-        "-fa "
+        "-fm "
+        "-jkmer_counts.json "
         "-t{threads} "
         "{input.targetfile} "
-        "{params.prefix} "
+        "kmer_counts "
         "$(mktemp -d) "
-        "&> {log}"
+        "&> {log} "
+        "&& "
+        "kmc_tools "
+        "transform "
+        "kmer_counts "
+        "dump "
+        "kmer_counts.txt "
+        "&>> {log} "
+        "&& "
+        "mv kmer_counts.* {params.outdir}/ "
 
 
 rule dedupe_extracted_targetfiles:
