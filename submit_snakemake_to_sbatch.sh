@@ -28,4 +28,5 @@ snakemake \
 	--keep-going \
 	--retries 0 \
 	--cores 64 \
-	--local-cores 2 
+	--local-cores 2 \
+	output/060_target-file-stats/qos_min1000000.mega353.peakall12/maxedits0/kmer_counts.kmc_pre

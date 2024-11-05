@@ -47,10 +47,11 @@ def get_remote_script(wildcards):
 bbmap = "docker://quay.io/biocontainers/bbmap:39.01--h92535d8_1"
 biopython = "docker://quay.io/biocontainers/biopython:1.78"
 captus = "docker://quay.io/biocontainers/captus:1.0.1--pyhdfd78af_2"
+kmc = "docker://quay.io/biocontainers/kmc:3.2.4--h6dccd9a_2"
 orthofinder = "docker://davidemms/orthofinder:2.5.5.2"
+qcat = "docker://quay.io/biocontainers/qcat:1.1.0--py_0"
 r = "docker://ghcr.io/tomharrop/r-containers:r2u_24.04_cv1"
 samtools = "docker://quay.io/biocontainers/samtools:1.21--h50ea8bc_0"
-qcat = "docker://quay.io/biocontainers/qcat:1.1.0--py_0"
 
 # globals
 outdir = Path("output")
@@ -109,6 +110,7 @@ query_file_locations = {
 
 all_query_datasets = query_file_locations.keys()
 
+maxedits = [0, 1, 2, 3]
 
 remote_scripts = {
     "filter_mega353.py": github(
@@ -124,6 +126,126 @@ wildcard_constraints:
     query_targets="|".join(all_query_datasets),
     ref_dataset="|".join(all_reference_genomes),
     query_dataset="|".join(all_query_datasets),
+    maxedit="|".join([str(x) for x in maxedits]),
+
+
+############################
+# STATS ON THE TARGETFILES #
+############################
+
+
+rule count_kmers_in_extracted_targetfiles:
+    input:
+        targetfile=Path(
+            outdir,
+            "060_target-file-stats",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "maxedits{maxedit}",
+            "deduplicated.fasta",
+        ),
+    output:
+        kmc_pre=Path(
+            outdir,
+            "060_target-file-stats",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "maxedits{maxedit}",
+            "kmer_counts.kmc_pre",
+        ),
+        kmc_suf=Path(
+            outdir,
+            "060_target-file-stats",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "maxedits{maxedit}",
+            "kmer_counts.kmc_suf",
+        ),
+    params:
+        prefix=lambda wildcards, output: Path(output.kmc_pre).with_suffix(""),
+    log:
+        Path(
+            logdir,
+            "count_kmers_in_extracted_targetfiles",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}.maxedits{maxedit}.log",
+        ),
+    threads: lambda wildcards, attempt: int(12 * attempt)
+    resources:
+        mem_mb=lambda wildcards, attempt: int(32e3 * attempt),
+        time=lambda wildcards, attempt: int(30 * attempt),
+    shadow:
+        "minimal"
+    container:
+        kmc
+    shell:
+        "kmc "
+        "-k80 "
+        '"-m$(( {resources.mem_mb}/1000 ))" '
+        "-fa "
+        "-t{threads} "
+        "{input.targetfile} "
+        "{params.prefix} "
+        "$(mkstemp -d) "
+        "&> {log}"
+
+
+rule dedupe_extracted_targetfiles:
+    input:
+        targetfile=Path(
+            outdir,
+            "030_merged-target-sequences",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "merged_targets.no_captus_paralogs.fasta",
+        ),
+    output:
+        targetfile=Path(
+            outdir,
+            "060_target-file-stats",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "maxedits{maxedit}",
+            "deduplicated.fasta",
+        ),
+        duplicates=Path(
+            outdir,
+            "060_target-file-stats",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "maxedits{maxedit}",
+            "discarded_duplicates.fasta",
+        ),
+    log:
+        Path(
+            logdir,
+            "dedupe_extracted_targetfiles",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}.maxedits{maxedit}.log",
+        ),
+    threads: 2
+    resources:
+        time=lambda wildcards, attempt: int(30 * attempt),
+    container:
+        bbmap
+    shell:
+        "dedupe.sh "
+        "in={input} "
+        "out={output.targetfile} "
+        "outd={output.duplicates} "
+        "ascending=t "
+        "exact=t "
+        "fixjunk=t "
+        "maxedits={wildcards.maxedit} "
+        "maxsubs=0 "
+        "sort=name "
+        "touppercase=t "
+        "uniquenames=t "
+        "2> {log} "
+
+
+rule stats_target:
+    input:
+        expand(
+            rules.count_kmers_in_extracted_targetfiles.output,
+            ref_dataset=["qos", "pzijinensis"],
+            minlength=["1000000"],
+            ref_targets=["mega353"],
+            query_targets=["peakall12", "peakall35", "peakallboth"],
+            maxedit=maxedits,
+        ),
 
 
 #########################################################
@@ -175,8 +297,6 @@ rule rename_original_targetfile:
         biopython
     script:
         "src/rename_original_targetfile.py"
-
-
 
 
 #####################################
@@ -319,6 +439,8 @@ rule merge_extracted_sequences:
             "min{minlength}",
             "03_extractions",
         ),
+        # hardcoding for this particular pipeline
+        # TODO: generalise
         loci_to_merge=expand(
             Path(
                 outdir,
@@ -326,8 +448,6 @@ rule merge_extracted_sequences:
                 "{ref_dataset}_min{minlength}.{ref_targets}.{{query_targets}}",
                 "loci_to_merge",
             ),
-            # hardcoding for this particular pipeline
-            # TODO: generalise
             ref_dataset=["qos", "pzijinensis"],
             minlength=["1000000"],
             ref_targets=["mega353"],
