@@ -182,7 +182,7 @@ rule count_kmers_in_extracted_targetfiles:
         "-t{threads} "
         "{input.targetfile} "
         "{params.prefix} "
-        "$(mkstemp -d) "
+        "$(mktemp -d) "
         "&> {log}"
 
 
