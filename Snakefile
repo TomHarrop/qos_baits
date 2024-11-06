@@ -52,6 +52,7 @@ orthofinder = "docker://davidemms/orthofinder:2.5.5.2"
 qcat = "docker://quay.io/biocontainers/qcat:1.1.0--py_0"
 r = "docker://ghcr.io/tomharrop/r-containers:r2u_24.04_cv1"
 samtools = "docker://quay.io/biocontainers/samtools:1.21--h50ea8bc_0"
+usearch = "docker://quay.io/biocontainers/usearch:12.0_beta--h9ee0642_1"
 
 # globals
 outdir = Path("output")
@@ -110,7 +111,9 @@ query_file_locations = {
 
 all_query_datasets = query_file_locations.keys()
 
+# for clustering the targets
 maxedits = [0, 1, 2, 3]
+sequence_identities = list(range(95, 100, 1))
 
 remote_scripts = {
     "filter_mega353.py": github(
@@ -127,6 +130,7 @@ wildcard_constraints:
     ref_dataset="|".join(all_reference_genomes),
     query_dataset="|".join(all_query_datasets),
     maxedit="|".join([str(x) for x in maxedits]),
+    sequence_identity="|".join([str(x) for x in sequence_identities]),
 
 
 ############################
@@ -134,42 +138,82 @@ wildcard_constraints:
 ############################
 
 
+rule usearch:
+    input:
+        counts=Path(
+            outdir,
+            "060_target-file-stats",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "kmc",
+            "kmer_counts.txt",
+        ),
+    output:
+        Path(
+            outdir,
+            "060_target-file-stats",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
+            "usearch",
+            "clusters.id{sequence_identity}.fasta",
+        ),
+    log:
+        Path(
+            logdir,
+            "usearch",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}.id{sequence_identity}.log",
+        ),
+    threads: 12
+    container:
+        usearch
+    shadow:
+        "minimal"
+    shell:
+        'awk \'{{print ">seq" NR "_" $2 "\\n" $1}}\' {input.counts} > kmer_counts.fasta '
+        "&& "
+        "usearch "
+        "-threads {threads} "
+        "-cluster_fast kmer_counts.fasta "
+        "-id 0.{wildcards.sequence_identity} "
+        "-centroids clusters.fasta "
+        "&> {log} "
+        "&& "
+        "mv clusters.fasta {output}"
+
+
 rule count_kmers_in_extracted_targetfiles:
     input:
         targetfile=Path(
             outdir,
-            "060_target-file-stats",
+            "030_merged-target-sequences",
             "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
-            "maxedits{maxedit}",
-            "deduplicated.fasta",
+            "merged_targets.no_captus_paralogs.fasta",
         ),
     output:
         kmc_pre=Path(
             outdir,
             "060_target-file-stats",
             "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
-            "maxedits{maxedit}",
+            "kmc",
             "kmer_counts.kmc_pre",
         ),
         kmc_suf=Path(
             outdir,
             "060_target-file-stats",
             "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
-            "maxedits{maxedit}",
+            "kmc",
             "kmer_counts.kmc_suf",
         ),
         counts=Path(
             outdir,
             "060_target-file-stats",
             "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
-            "maxedits{maxedit}",
+            "kmc",
             "kmer_counts.txt",
         ),
         stats=Path(
             outdir,
             "060_target-file-stats",
             "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}",
-            "maxedits{maxedit}",
+            "kmc",
             "kmer_counts.json",
         ),
     params:
@@ -178,7 +222,7 @@ rule count_kmers_in_extracted_targetfiles:
         Path(
             logdir,
             "count_kmers_in_extracted_targetfiles",
-            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}.maxedits{maxedit}.log",
+            "{ref_dataset}_min{minlength}.{ref_targets}.{query_targets}.log",
         ),
     threads: lambda wildcards, attempt: int(12 * attempt)
     resources:
@@ -264,12 +308,20 @@ rule dedupe_extracted_targetfiles:
 rule stats_target:
     input:
         expand(
-            rules.count_kmers_in_extracted_targetfiles.output,
+            [str(x) for x in rules.dedupe_extracted_targetfiles.output],
             ref_dataset=["qos", "pzijinensis"],
             minlength=["1000000"],
             ref_targets=["mega353"],
             query_targets=["peakall12", "peakall35", "peakallboth"],
             maxedit=maxedits,
+        ),
+        expand(
+            [str(x) for x in rules.usearch.output],
+            ref_dataset=["qos", "pzijinensis"],
+            minlength=["1000000"],
+            ref_targets=["mega353"],
+            query_targets=["peakall12", "peakall35", "peakallboth"],
+            sequence_identity=sequence_identities,
         ),
 
 
